@@ -83,6 +83,52 @@ class BotWorker(QThread):
             self.tutorial_engine.stop()
 
 
+class EmulatorInitWorker(QThread):
+    """
+    Рабочий поток для инициализации эмуляторов.
+    Предотвращает блокировку основного потока UI.
+    """
+    initialization_complete = pyqtSignal(dict)
+    initialization_failed = pyqtSignal(str)
+    progress_update = pyqtSignal(int, int)  # текущий, всего
+
+    def __init__(self, emulator_manager, emulator_indices, server_ranges):
+        super().__init__()
+        self.emulator_manager = emulator_manager
+        self.emulator_indices = emulator_indices
+        self.server_ranges = server_ranges
+
+    def run(self):
+        try:
+            # Получаем ADB ID для каждого эмулятора
+            emulator_ids = {}
+            total = len(self.emulator_indices)
+
+            for i, index in enumerate(self.emulator_indices):
+                # Сигнализируем о прогрессе
+                self.progress_update.emit(i + 1, total)
+
+                # Проверяем, запущен ли эмулятор
+                if not self.emulator_manager.is_emulator_running(index):
+                    logger.warning(f"Эмулятор {index} не запущен, пропускаем")
+                    continue
+
+                # Получаем ADB ID (эта операция может занять время)
+                adb_id = self.emulator_manager.get_emulator_adb_id(index)
+
+                if not adb_id:
+                    logger.error(f"Не удалось получить ADB ID для эмулятора {index}")
+                    continue
+
+                emulator_ids[index] = adb_id
+
+            # Сигнализируем о завершении инициализации
+            self.initialization_complete.emit(emulator_ids)
+        except Exception as e:
+            logger.error(f"Ошибка при инициализации эмуляторов: {e}", exc_info=True)
+            self.initialization_failed.emit(str(e))
+
+
 class StatsTracker:
     """
     Класс для отслеживания статистики выполнения бота.
@@ -1056,6 +1102,86 @@ class MainWindow(QMainWindow):
             self.start_server_spin.setValue(1)
             self.end_server_spin.setValue(264)
 
+    def on_emulators_initialized(self, emulator_ids):
+        """
+        Обработка события завершения инициализации эмуляторов.
+
+        Args:
+            emulator_ids: Словарь {emulator_index: adb_id}
+        """
+        try:
+            # Проверяем, есть ли инициализированные эмуляторы
+            if not emulator_ids:
+                QMessageBox.warning(self, "Предупреждение", "Не удалось инициализировать ни один эмулятор.")
+                self.start_bot_btn.setEnabled(True)
+                self.status_label.setText("Бот не запущен")
+                return
+
+            # Сохраняем соответствие индексов эмуляторов и их ADB ID
+            # Это поле может понадобиться для дальнейшей работы
+            self.emulator_ids = emulator_ids
+
+            # Запускаем туториалы на каждом эмуляторе
+            task_ids = {}
+
+            for index, adb_id in emulator_ids.items():
+                # Определяем диапазон серверов для этого эмулятора
+                server_range = self.server_ranges.get(index, (1, 10))
+
+                # Запускаем туториал
+                task_id = self.parallel_executor.start_tutorial(
+                    emulator_id=adb_id,
+                    server_range=server_range,
+                    on_step_complete=lambda eid, sid, success: self.handle_step_completed(eid, sid, success),
+                    on_tutorial_complete=lambda eid, success: self.handle_tutorial_completed(eid, success)
+                )
+
+                if task_id:
+                    task_ids[index] = task_id
+                    logger.info(f"Запущен туториал на эмуляторе {index} (ADB ID: {adb_id}) с задачей {task_id}")
+                else:
+                    logger.error(f"Не удалось запустить туториал на эмуляторе {index}")
+
+            if task_ids:
+                # Обновляем UI
+                self.stop_bot_btn.setEnabled(True)
+                self.status_label.setText(f"Бот запущен на {len(task_ids)} эмуляторах")
+                self.update_statistics()
+            else:
+                QMessageBox.warning(self, "Предупреждение", "Не удалось запустить бота ни на одном эмуляторе.")
+                self.start_bot_btn.setEnabled(True)
+                self.status_label.setText("Бот не запущен")
+        except Exception as e:
+            logger.error(f"Ошибка при запуске туториалов: {e}", exc_info=True)
+            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка при запуске туториалов: {str(e)}")
+            self.start_bot_btn.setEnabled(True)
+            self.status_label.setText("Бот не запущен")
+
+    def on_initialization_failed(self, error_message):
+        """
+        Обработка события ошибки инициализации эмуляторов.
+
+        Args:
+            error_message: Сообщение об ошибке
+        """
+        logger.error(f"Не удалось инициализировать эмуляторы: {error_message}")
+        QMessageBox.critical(self, "Ошибка", f"Не удалось инициализировать эмуляторы: {error_message}")
+        self.start_bot_btn.setEnabled(True)
+        self.status_label.setText("Бот не запущен")
+
+    def on_initialization_progress(self, current, total):
+        """
+        Обработка события обновления прогресса инициализации эмуляторов.
+
+        Args:
+            current: Текущий номер эмулятора
+            total: Общее количество эмуляторов
+        """
+        # Обновляем индикатор прогресса
+        progress = int(current * 100 / total)
+        self.progress_bar.setValue(progress)
+        self.status_label.setText(f"Инициализация эмуляторов: {current}/{total}")
+
     def start_bot(self):
         """
         Запуск бота на выбранных эмуляторах.
@@ -1093,30 +1219,39 @@ class MainWindow(QMainWindow):
             self.parallel_executor = ParallelEmulatorExecutor(
                 assets_path=str(self.assets_path),
                 max_workers=None,
-                emulator_manager=self.emulator_manager  # Передаем существующий EmulatorManager
+                emulator_manager=self.emulator_manager
             )
 
             # Запускаем параллельное выполнение
             self.parallel_executor.start()
 
-            task_ids = self.parallel_executor.process_multiple_emulators(
-                emulator_indices=emulator_indices,
-                server_ranges=server_ranges,
-                on_step_complete=self.handle_step_completed,
-                on_tutorial_complete=self.handle_tutorial_completed
+            # Показываем индикатор прогресса и блокируем кнопки
+            self.start_bot_btn.setEnabled(False)
+            self.status_label.setText("Инициализация эмуляторов...")
+            self.progress_bar.setValue(0)
+
+            # Сохраняем server_ranges для дальнейшего использования
+            self.server_ranges = server_ranges
+
+            # Создаем и запускаем рабочий поток для инициализации
+            self.init_worker = EmulatorInitWorker(
+                self.emulator_manager,
+                emulator_indices,
+                server_ranges
             )
 
-            if task_ids:
-                # Обновляем UI
-                self.start_bot_btn.setEnabled(False)
-                self.stop_bot_btn.setEnabled(True)
-                self.status_label.setText(f"Бот запущен на {len(task_ids)} эмуляторах")
-                self.update_statistics()
-            else:
-                QMessageBox.warning(self, "Предупреждение", "Не удалось запустить бота ни на одном эмуляторе.")
+            # Подключаем сигналы
+            self.init_worker.initialization_complete.connect(self.on_emulators_initialized)
+            self.init_worker.initialization_failed.connect(self.on_initialization_failed)
+            self.init_worker.progress_update.connect(self.on_initialization_progress)
+
+            # Запускаем рабочий поток
+            self.init_worker.start()
+
         except Exception as e:
             logger.error(f"Ошибка при запуске бота: {e}", exc_info=True)
             QMessageBox.critical(self, "Ошибка", f"Произошла ошибка при запуске бота: {str(e)}")
+            self.start_bot_btn.setEnabled(True)
 
     def stop_bot(self):
         """
@@ -1145,8 +1280,7 @@ class MainWindow(QMainWindow):
         """
         # Получаем индекс эмулятора по его ADB ID
         emulator_index = None
-        for idx, adb_id in self.parallel_executor.emulator_ids.items() if hasattr(self.parallel_executor,
-                                                                                  'emulator_ids') else {}:
+        for idx, adb_id in self.emulator_ids.items() if hasattr(self, 'emulator_ids') else {}:
             if adb_id == emulator_id:
                 emulator_index = idx
                 break
@@ -1181,8 +1315,7 @@ class MainWindow(QMainWindow):
         """
         # Получаем индекс эмулятора по его ADB ID
         emulator_index = None
-        for idx, adb_id in self.parallel_executor.emulator_ids.items() if hasattr(self.parallel_executor,
-                                                                                  'emulator_ids') else {}:
+        for idx, adb_id in self.emulator_ids.items() if hasattr(self, 'emulator_ids') else {}:
             if adb_id == emulator_id:
                 emulator_index = idx
                 break

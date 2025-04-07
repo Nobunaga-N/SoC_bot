@@ -215,13 +215,23 @@ class ParallelEmulatorExecutor:
                 adb_controller = self.adb_controllers[emulator_id]
                 image_processor = self.image_processors[emulator_id]
 
+                # Создаем функции-обертки для колбэков с передачей ID эмулятора
+                step_callback = None
+                complete_callback = None
+
+                if on_step_complete:
+                    step_callback = lambda step_id, success: on_step_complete(emulator_id, step_id, success)
+
+                if on_tutorial_complete:
+                    complete_callback = lambda success: on_tutorial_complete(emulator_id, success)
+
                 # Создаем движок туториала
                 tutorial_engine = TutorialEngine(
                     adb_controller=adb_controller,
                     image_processor=image_processor,
                     server_range=server_range,
-                    on_step_complete=on_step_complete,
-                    on_tutorial_complete=on_tutorial_complete
+                    on_step_complete=step_callback,
+                    on_tutorial_complete=complete_callback
                 )
 
                 # Загружаем шаги туториала

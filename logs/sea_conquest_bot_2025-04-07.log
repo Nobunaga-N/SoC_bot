@@ -34,3 +34,88 @@
 2025-04-07 03:06:46 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
 2025-04-07 03:06:51 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
 2025-04-07 03:06:51 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
+2025-04-07 03:10:15 - src.config.settings - INFO - Файл настроек не найден, используются настройки по умолчанию
+2025-04-07 03:10:15 - root - INFO - Установлен уровень логирования: INFO
+2025-04-07 03:10:15 - src.core.emulator_manager - INFO - Инициализация менеджера эмуляторов. Путь к LDPlayer: None
+2025-04-07 03:10:15 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:10:15 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:10:20 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:10:20 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:10:25 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:10:25 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:10:30 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:10:30 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:10:35 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:10:35 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:10:40 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:10:40 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:10:45 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:10:45 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:14:09 - src.config.settings - INFO - Файл настроек не найден, используются настройки по умолчанию
+2025-04-07 03:14:09 - root - INFO - Установлен уровень логирования: INFO
+2025-04-07 03:14:09 - src.core.emulator_manager - INFO - Инициализация менеджера эмуляторов. Путь к LDPlayer: None
+2025-04-07 03:14:09 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:14:09 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:14:14 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:14:14 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:14:19 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:14:19 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:14:24 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:14:24 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:14:29 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:14:29 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:32:49 - src.config.settings - INFO - Файл настроек не найден, используются настройки по умолчанию
+2025-04-07 03:32:49 - root - INFO - Установлен уровень логирования: INFO
+2025-04-07 03:32:49 - src.core.emulator_manager - INFO - Инициализация менеджера эмуляторов. Путь к LDPlayer: None
+2025-04-07 03:32:49 - src.core.emulator_manager - INFO - Инициализация менеджера эмуляторов. Путь к LDPlayer: None
+2025-04-07 03:32:49 - src.core.image_processor - INFO - Инициализация обработчика изображений, загружено 0 шаблонов
+2025-04-07 03:32:49 - src.core.parallel_executor - INFO - Инициализирован глобальный обработчик изображений
+2025-04-07 03:32:49 - src.core.parallel_executor - INFO - Инициализация параллельного исполнителя с максимальным количеством потоков: None
+2025-04-07 03:32:49 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:32:49 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:32:54 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:32:54 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:32:55 - main - ERROR - Непредвиденная ошибка:
+Traceback (most recent call last):
+  File "E:\PyProjectsNew\SoC_bot\src\ui\main_window.py", line 772, in closeEvent
+    for worker in self.bot_workers.values():
+                  ^^^^^^^^^^^^^^^^
+AttributeError: 'MainWindow' object has no attribute 'bot_workers'
+2025-04-07 03:32:59 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:32:59 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:45:19 - src.config.settings - INFO - Файл настроек не найден, используются настройки по умолчанию
+2025-04-07 03:45:19 - root - INFO - Установлен уровень логирования: INFO
+2025-04-07 03:45:19 - src.core.emulator_manager - INFO - Инициализация менеджера эмуляторов. Путь к LDPlayer: None
+2025-04-07 03:45:19 - src.core.emulator_manager - INFO - Инициализация менеджера эмуляторов. Путь к LDPlayer: None
+2025-04-07 03:45:19 - src.core.image_processor - INFO - Инициализация обработчика изображений, загружено 0 шаблонов
+2025-04-07 03:45:19 - src.core.parallel_executor - INFO - Инициализирован глобальный обработчик изображений
+2025-04-07 03:45:19 - src.core.parallel_executor - INFO - Инициализация параллельного исполнителя с максимальным количеством потоков: None
+2025-04-07 03:45:19 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:45:19 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:45:24 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:45:24 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:45:25 - main - ERROR - Непредвиденная ошибка:
+Traceback (most recent call last):
+  File "E:\PyProjectsNew\SoC_bot\src\ui\main_window.py", line 1066, in closeEvent
+    for worker in self.bot_workers.values():
+                  ^^^^^^^^^^^^^^^^
+AttributeError: 'MainWindow' object has no attribute 'bot_workers'
+2025-04-07 03:48:54 - src.config.settings - INFO - Файл настроек не найден, используются настройки по умолчанию
+2025-04-07 03:48:54 - root - INFO - Установлен уровень логирования: INFO
+2025-04-07 03:48:54 - src.core.emulator_manager - INFO - Инициализация менеджера эмуляторов. Путь к LDPlayer: None
+2025-04-07 03:48:54 - src.core.emulator_manager - INFO - Инициализация менеджера эмуляторов. Путь к LDPlayer: None
+2025-04-07 03:48:54 - src.core.image_processor - INFO - Инициализация обработчика изображений, загружено 0 шаблонов
+2025-04-07 03:48:54 - src.core.parallel_executor - INFO - Инициализирован глобальный обработчик изображений
+2025-04-07 03:48:54 - src.core.parallel_executor - INFO - Инициализация параллельного исполнителя с максимальным количеством потоков: None
+2025-04-07 03:48:54 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:48:54 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:48:54 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:48:54 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:48:59 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:48:59 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:48:59 - main - ERROR - Непредвиденная ошибка:
+Traceback (most recent call last):
+  File "E:\PyProjectsNew\SoC_bot\src\ui\main_window.py", line 1234, in closeEvent
+    for worker in self.bot_workers.values():
+                  ^^^^^^^^^^^^^^^^
+AttributeError: 'MainWindow' object has no attribute 'bot_workers'

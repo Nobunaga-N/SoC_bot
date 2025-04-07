@@ -344,3 +344,124 @@ class EmulatorManager:
             if emu["index"] == str(emulator_index) and emu["status"] == "running":
                 return True
         return False
+
+    def emulator_manager_fixes():
+        # Добавление метода для проверки зависания эмулятора
+        def is_emulator_responsive(self, emulator_index: int) -> bool:
+            """
+            Проверка, отвечает ли эмулятор на команды.
+
+            Args:
+                emulator_index: Индекс эмулятора
+
+            Returns:
+                True если эмулятор отвечает, иначе False
+            """
+            # Сначала проверяем, запущен ли эмулятор
+            if not self.is_emulator_running(emulator_index):
+                logger.warning(f"Эмулятор {emulator_index} не запущен")
+                return False
+
+            # Получаем ADB ID
+            adb_id = self.get_emulator_adb_id(emulator_index)
+
+            if not adb_id:
+                logger.error(f"Не удалось получить ADB ID для эмулятора {emulator_index}")
+                return False
+
+            try:
+                # Пытаемся выполнить простую ADB команду
+                result = subprocess.run(
+                    f"adb -s {adb_id} shell dumpsys window",
+                    shell=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+
+                # Проверяем код возврата
+                if result.returncode != 0:
+                    logger.warning(f"Эмулятор {emulator_index} не отвечает на ADB команды")
+                    return False
+
+                # Если команда выполнена успешно, эмулятор отвечает
+                return True
+            except subprocess.TimeoutExpired:
+                logger.warning(f"Таймаут при выполнении команды для эмулятора {emulator_index}")
+                return False
+            except Exception as e:
+                logger.error(f"Ошибка при проверке эмулятора {emulator_index}: {e}")
+                return False
+
+    def restart_if_unresponsive(self, emulator_index: int, check_interval: int = 30) -> bool:
+        """
+        Перезапуск эмулятора, если он не отвечает на команды.
+
+        Args:
+            emulator_index: Индекс эмулятора
+            check_interval: Интервал проверки в секундах
+
+        Returns:
+            True если эмулятор в рабочем состоянии (или успешно перезапущен), иначе False
+        """
+        # Проверяем, отвечает ли эмулятор
+        if self.is_emulator_responsive(emulator_index):
+            return True
+
+        logger.warning(f"Эмулятор {emulator_index} не отвечает, попытка перезапуска")
+
+        # Принудительно останавливаем эмулятор (в случае зависания)
+        for attempt in range(3):
+            try:
+                self.execute_ldconsole(f"quit --index {emulator_index} --force")
+                break
+            except Exception as e:
+                logger.error(f"Ошибка при остановке эмулятора {emulator_index}: {e}")
+
+        # Ждем некоторое время
+        time.sleep(5)
+
+        # Пытаемся перезапустить эмулятор
+        return self.restart_emulator(emulator_index)
+
+    def start_emulator_with_params(self, emulator_index: int, params: dict = None) -> bool:
+        """
+        Запуск эмулятора с определенными параметрами.
+
+        Args:
+            emulator_index: Индекс эмулятора
+            params: Словарь параметров {параметр: значение}
+
+        Returns:
+            True если эмулятор запущен успешно, иначе False
+        """
+        params = params or {}
+
+        # Проверяем, не запущен ли уже эмулятор
+        if self.is_emulator_running(emulator_index):
+            logger.info(f"Эмулятор {emulator_index} уже запущен")
+            return True
+
+        # Формируем команду запуска с параметрами
+        cmd = f"launch --index {emulator_index}"
+
+        # Добавляем параметры
+        for param, value in params.items():
+            cmd += f" --{param} {value}"
+
+        # Запускаем эмулятор
+        result = self.execute_ldconsole(cmd)
+
+        # Ждем запуска эмулятора
+        max_attempts = 30
+        for attempt in range(max_attempts):
+            time.sleep(2)  # Ждем 2 секунды между проверками
+
+            if self.is_emulator_running(emulator_index):
+                logger.info(f"Эмулятор {emulator_index} успешно запущен с параметрами: {params}")
+                return True
+
+            logger.debug(f"Ожидание запуска эмулятора {emulator_index}, попытка {attempt + 1}/{max_attempts}")
+
+        logger.error(f"Не удалось запустить эмулятор {emulator_index} после {max_attempts} попыток")
+        return False

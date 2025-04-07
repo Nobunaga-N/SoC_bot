@@ -412,3 +412,154 @@ class TutorialEngine:
                 return False
 
         return False
+
+    def tutorial_engine_fixes():
+        # Добавление системы контрольных точек
+        def _add_checkpoint_system(self):
+            """
+            Добавляет функциональность контрольных точек для возможности сохранения прогресса.
+            """
+            # Атрибуты для системы контрольных точек
+            self.checkpoints = {}
+            self.last_checkpoint_id = None
+
+        def save_checkpoint(self, checkpoint_id: str = None):
+            """
+            Сохранение текущего состояния туториала в контрольную точку.
+
+            Args:
+                checkpoint_id: Идентификатор контрольной точки (если None, генерируется автоматически)
+
+            Returns:
+                Идентификатор сохраненной контрольной точки
+            """
+            if not self.current_step:
+                logger.warning("Невозможно сохранить контрольную точку: туториал не запущен")
+                return None
+
+            if checkpoint_id is None:
+                checkpoint_id = f"checkpoint_{self.current_step.id}_{int(time.time())}"
+
+            # Сохраняем информацию о текущем состоянии
+            self.checkpoints[checkpoint_id] = {
+                "step_id": self.current_step.id,
+                "timestamp": time.time(),
+                "server_range": self.server_range
+            }
+
+            self.last_checkpoint_id = checkpoint_id
+            logger.info(f"Сохранена контрольная точка {checkpoint_id} на шаге {self.current_step.id}")
+
+            return checkpoint_id
+
+    def restore_checkpoint(self, checkpoint_id: str = None):
+        """
+        Восстановление туториала из контрольной точки.
+
+        Args:
+            checkpoint_id: Идентификатор контрольной точки (если None, используется последняя)
+
+        Returns:
+            True если восстановление успешно, иначе False
+        """
+        # Если ID не указан, используем последнюю контрольную точку
+        if checkpoint_id is None:
+            checkpoint_id = self.last_checkpoint_id
+
+        if checkpoint_id is None or checkpoint_id not in self.checkpoints:
+            logger.warning(f"Контрольная точка {checkpoint_id} не найдена")
+            return False
+
+        checkpoint = self.checkpoints[checkpoint_id]
+
+        # Находим индекс шага в списке
+        step_index = -1
+        for i, step in enumerate(self.steps):
+            if step.id == checkpoint["step_id"]:
+                step_index = i
+                break
+
+        if step_index == -1:
+            logger.error(f"Шаг {checkpoint['step_id']} не найден в списке шагов")
+            return False
+
+        # Устанавливаем диапазон серверов
+        self.server_range = checkpoint["server_range"]
+
+        # Сохраняем индекс для начала выполнения с этого шага
+        self._checkpoint_step_index = step_index
+
+        logger.info(f"Восстановлена контрольная точка {checkpoint_id} на шаге {checkpoint['step_id']}")
+        return True
+
+    def _run_tutorial_with_checkpoints(self):
+        """
+        Модифицированная версия метода _run_tutorial с поддержкой контрольных точек.
+        """
+        logger.info("Начало выполнения туториала")
+        success = False
+
+        try:
+            # Определяем начальный индекс шага
+            start_index = getattr(self, '_checkpoint_step_index', 0)
+            if start_index > 0:
+                logger.info(f"Продолжение с шага {self.steps[start_index].id}")
+
+            # Перебираем шаги туториала начиная с заданного индекса
+            for i in range(start_index, len(self.steps)):
+                step = self.steps[i]
+
+                if self.stop_event.is_set():
+                    logger.info("Выполнение туториала прервано")
+                    break
+
+                self.current_step = step
+                logger.info(f"Выполнение шага {step.id}: {step.description}")
+
+                # Выполняем шаг с заданным количеством попыток
+                step_success = False
+                for attempt in range(step.retry_count):
+                    if self.stop_event.is_set():
+                        break
+
+                    try:
+                        # Выполняем действие шага
+                        result = step.action(*step.args, **step.kwargs)
+                        step_success = True
+
+                        # Если шаг является критичным, сохраняем контрольную точку
+                        if i % 5 == 0:  # Каждый 5-й шаг считаем критичным
+                            self.save_checkpoint()
+
+                        break
+                    except Exception as e:
+                        logger.error(
+                            f"Ошибка при выполнении шага {step.id} (попытка {attempt + 1}/{step.retry_count}): {e}")
+                        if attempt < step.retry_count - 1:
+                            time.sleep(1.0)  # Пауза перед следующей попыткой
+
+                # Вызываем колбэк завершения шага
+                if self.on_step_complete:
+                    self.on_step_complete(step.id, step_success)
+
+                if not step_success:
+                    logger.error(f"Шаг {step.id} не выполнен после {step.retry_count} попыток")
+                    break
+
+            # Если дошли до конца и не было прерывания, считаем туториал успешным
+            success = not self.stop_event.is_set() and self.current_step.id == self.steps[-1].id
+            logger.info(f"Туториал {'успешно завершен' if success else 'не завершен'}")
+
+        except Exception as e:
+            logger.error(f"Неожиданная ошибка при выполнении туториала: {e}", exc_info=True)
+
+        # Вызываем колбэк завершения туториала
+        if self.on_tutorial_complete:
+            self.on_tutorial_complete(success)
+
+        self.current_step = None
+        # Очищаем информацию о контрольной точке
+        if hasattr(self, '_checkpoint_step_index'):
+            delattr(self, '_checkpoint_step_index')
+
+        return success

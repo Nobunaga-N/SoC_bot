@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Union
@@ -199,8 +200,12 @@ class MainWindow(QMainWindow):
         # Инициализация атрибутов с пустыми значениями для типизации
         self.bot_workers = {}
 
-        # Инициализация менеджера эмуляторов
-        self.emulator_manager = EmulatorManager()
+        # Загружаем путь к LDPlayer из настроек
+        from ..config.settings import user_settings
+        ldplayer_path = user_settings.get("ldplayer_path", "")
+
+        # Инициализация менеджера эмуляторов с путем из настроек
+        self.emulator_manager = EmulatorManager(ldplayer_path)
 
         # Статистика
         self.stats = StatsTracker()
@@ -528,6 +533,26 @@ class MainWindow(QMainWindow):
         Установка пути к LDPlayer.
         """
         path = self.ldplayer_path_combo.currentText()
+
+        # Если путь пустой, пробуем автоматически обнаружить
+        if not path.strip():
+            QMessageBox.information(self, "Автоматический поиск",
+                                    "Путь не указан. Выполняется автоматический поиск LDPlayer...")
+            if hasattr(self.emulator_manager, '_try_find_ldplayer'):
+                success = self.emulator_manager._try_find_ldplayer()
+                if success:
+                    # Обновляем комбобокс
+                    self.ldplayer_path_combo.setCurrentText(self.emulator_manager.ldplayer_path)
+                    QMessageBox.information(self, "Успех",
+                                            f"LDPlayer автоматически найден: {self.emulator_manager.ldplayer_path}")
+                    self.refresh_emulators()
+                    return
+                else:
+                    QMessageBox.warning(self, "Ошибка",
+                                        "Не удалось автоматически найти LDPlayer. Пожалуйста, укажите путь вручную.")
+                    return
+
+        # Устанавливаем указанный путь
         success = self.emulator_manager.set_ldplayer_path(path)
 
         if success:
@@ -1057,6 +1082,17 @@ class MainWindow(QMainWindow):
             server_ranges = {}
             for idx in emulator_indices:
                 server_ranges[idx] = (start_server, end_server)
+
+            # Перезапускаем parallel_executor если он уже был запущен
+            if hasattr(self, 'parallel_executor') and self.parallel_executor is not None:
+                self.parallel_executor.stop()
+                time.sleep(1)  # Даем время на остановку
+
+            # Заново инициализируем executor
+            self.parallel_executor = ParallelEmulatorExecutor(
+                assets_path=str(self.assets_path),
+                max_workers=None
+            )
 
             # Запускаем параллельное выполнение
             self.parallel_executor.start()

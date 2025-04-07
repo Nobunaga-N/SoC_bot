@@ -430,3 +430,135 @@ AttributeError: 'MainWindow' object has no attribute 'bot_workers'
 2025-04-07 05:07:19 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
 2025-04-07 05:07:43 - src.core.parallel_executor - INFO - Остановка обработчика задач
 2025-04-07 05:07:43 - src.core.parallel_executor - INFO - Обработчик задач остановлен
+2025-04-07 05:13:23 - src.config.settings - INFO - Файл настроек не найден, используются настройки по умолчанию
+2025-04-07 05:13:23 - root - INFO - Установлен уровень логирования: INFO
+2025-04-07 05:13:23 - src.core.emulator_manager - INFO - Инициализация менеджера эмуляторов. Путь к LDPlayer: 
+2025-04-07 05:13:23 - src.core.emulator_manager - INFO - Инициализация менеджера эмуляторов. Путь к LDPlayer: None
+2025-04-07 05:13:23 - src.core.image_processor - INFO - Инициализация обработчика изображений, загружено 13 шаблонов
+2025-04-07 05:13:23 - src.core.parallel_executor - INFO - Инициализирован глобальный обработчик изображений
+2025-04-07 05:13:23 - src.core.parallel_executor - INFO - Инициализация параллельного исполнителя с максимальным количеством потоков: None
+2025-04-07 05:13:24 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен или неверный: None
+2025-04-07 05:13:24 - src.core.emulator_manager - ERROR - Не удалось автоматически найти LDPlayer
+2025-04-07 05:13:24 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 05:13:24 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен или неверный: None
+2025-04-07 05:13:24 - src.core.emulator_manager - ERROR - Не удалось автоматически найти LDPlayer
+2025-04-07 05:13:24 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 05:13:36 - src.config.settings - INFO - Настройки успешно сохранены
+2025-04-07 05:13:36 - src.core.emulator_manager - INFO - Установлен путь к LDPlayer: D:\ldp\LDPlayer9
+2025-04-07 05:13:36 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
+2025-04-07 05:13:45 - src.core.parallel_executor - WARNING - Исполнитель не запущен
+2025-04-07 05:13:46 - src.core.emulator_manager - INFO - Инициализация менеджера эмуляторов. Путь к LDPlayer: None
+2025-04-07 05:13:46 - src.core.image_processor - INFO - Инициализация обработчика изображений, загружено 13 шаблонов
+2025-04-07 05:13:46 - src.core.parallel_executor - INFO - Инициализирован глобальный обработчик изображений
+2025-04-07 05:13:46 - src.core.parallel_executor - INFO - Инициализация параллельного исполнителя с максимальным количеством потоков: None
+2025-04-07 05:13:46 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен или неверный: None
+2025-04-07 05:13:46 - src.core.emulator_manager - ERROR - Не удалось автоматически найти LDPlayer
+2025-04-07 05:13:46 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 05:13:46 - src.core.parallel_executor - INFO - Определено количество рабочих потоков: 1
+2025-04-07 05:13:46 - src.core.parallel_executor - INFO - Запущен обработчик задач с 1 рабочими потоками
+2025-04-07 05:13:46 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен или неверный: None
+2025-04-07 05:13:46 - src.core.emulator_manager - ERROR - Не удалось автоматически найти LDPlayer
+2025-04-07 05:13:46 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 05:13:46 - src.core.parallel_executor - WARNING - Эмулятор 7 не запущен, пропускаем
+2025-04-07 05:13:54 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
+2025-04-07 05:14:03 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
+2025-04-07 05:14:03 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
+2025-04-07 05:14:13 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
+2025-04-07 05:14:13 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
+2025-04-07 05:14:19 - src.core.parallel_executor - INFO - Остановка обработчика задач
+2025-04-07 05:14:19 - src.core.parallel_executor - INFO - Обработчик задач остановлен
+2025-04-07 05:14:19 - src.core.parallel_executor - INFO - Рабочий поток очереди задач завершен
+2025-04-07 05:14:20 - src.core.emulator_manager - INFO - Инициализация менеджера эмуляторов. Путь к LDPlayer: None
+2025-04-07 05:14:20 - src.core.image_processor - INFO - Инициализация обработчика изображений, загружено 13 шаблонов
+2025-04-07 05:14:20 - src.core.parallel_executor - INFO - Инициализирован глобальный обработчик изображений
+2025-04-07 05:14:20 - src.core.parallel_executor - INFO - Инициализация параллельного исполнителя с максимальным количеством потоков: None
+2025-04-07 05:14:20 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен или неверный: None
+2025-04-07 05:14:20 - src.core.emulator_manager - ERROR - Не удалось автоматически найти LDPlayer
+2025-04-07 05:14:20 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 05:14:20 - src.core.parallel_executor - INFO - Определено количество рабочих потоков: 1
+2025-04-07 05:14:20 - src.core.parallel_executor - INFO - Запущен обработчик задач с 1 рабочими потоками
+2025-04-07 05:14:20 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен или неверный: None
+2025-04-07 05:14:20 - src.core.emulator_manager - ERROR - Не удалось автоматически найти LDPlayer
+2025-04-07 05:14:20 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 05:14:20 - src.core.parallel_executor - WARNING - Эмулятор 7 не запущен, пропускаем
+2025-04-07 05:14:24 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
+2025-04-07 05:14:40 - root - INFO - Установлен уровень логирования: INFO
+2025-04-07 05:14:40 - src.config.settings - INFO - Настройки успешно загружены
+2025-04-07 05:14:40 - root - INFO - Установлен уровень логирования: INFO
+2025-04-07 05:14:40 - src.core.emulator_manager - INFO - Инициализация менеджера эмуляторов. Путь к LDPlayer: D:\ldp\LDPlayer9
+2025-04-07 05:14:40 - src.core.emulator_manager - INFO - Инициализация менеджера эмуляторов. Путь к LDPlayer: None
+2025-04-07 05:14:40 - src.core.image_processor - INFO - Инициализация обработчика изображений, загружено 13 шаблонов
+2025-04-07 05:14:40 - src.core.parallel_executor - INFO - Инициализирован глобальный обработчик изображений
+2025-04-07 05:14:40 - src.core.parallel_executor - INFO - Инициализация параллельного исполнителя с максимальным количеством потоков: None
+2025-04-07 05:14:40 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
+2025-04-07 05:14:40 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
+2025-04-07 05:15:10 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
+2025-04-07 05:15:11 - src.core.parallel_executor - WARNING - Исполнитель не запущен
+2025-04-07 05:15:12 - src.core.emulator_manager - INFO - Инициализация менеджера эмуляторов. Путь к LDPlayer: None
+2025-04-07 05:15:12 - src.core.image_processor - INFO - Инициализация обработчика изображений, загружено 13 шаблонов
+2025-04-07 05:15:12 - src.core.parallel_executor - INFO - Инициализирован глобальный обработчик изображений
+2025-04-07 05:15:12 - src.core.parallel_executor - INFO - Инициализация параллельного исполнителя с максимальным количеством потоков: None
+2025-04-07 05:15:12 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен или неверный: None
+2025-04-07 05:15:12 - src.core.emulator_manager - ERROR - Не удалось автоматически найти LDPlayer
+2025-04-07 05:15:12 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 05:15:12 - src.core.parallel_executor - INFO - Определено количество рабочих потоков: 1
+2025-04-07 05:15:12 - src.core.parallel_executor - INFO - Запущен обработчик задач с 1 рабочими потоками
+2025-04-07 05:15:12 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен или неверный: None
+2025-04-07 05:15:12 - src.core.emulator_manager - ERROR - Не удалось автоматически найти LDPlayer
+2025-04-07 05:15:12 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 05:15:12 - src.core.parallel_executor - WARNING - Эмулятор 7 не запущен, пропускаем
+2025-04-07 05:15:26 - src.core.parallel_executor - INFO - Остановка обработчика задач
+2025-04-07 05:15:26 - src.core.parallel_executor - INFO - Обработчик задач остановлен
+2025-04-07 05:15:26 - src.core.parallel_executor - INFO - Рабочий поток очереди задач завершен
+2025-04-07 05:15:27 - src.core.emulator_manager - INFO - Инициализация менеджера эмуляторов. Путь к LDPlayer: None
+2025-04-07 05:15:27 - src.core.image_processor - INFO - Инициализация обработчика изображений, загружено 13 шаблонов
+2025-04-07 05:15:27 - src.core.parallel_executor - INFO - Инициализирован глобальный обработчик изображений
+2025-04-07 05:15:27 - src.core.parallel_executor - INFO - Инициализация параллельного исполнителя с максимальным количеством потоков: None
+2025-04-07 05:15:27 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен или неверный: None
+2025-04-07 05:15:27 - src.core.emulator_manager - ERROR - Не удалось автоматически найти LDPlayer
+2025-04-07 05:15:27 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 05:15:27 - src.core.parallel_executor - INFO - Определено количество рабочих потоков: 1
+2025-04-07 05:15:27 - src.core.parallel_executor - INFO - Запущен обработчик задач с 1 рабочими потоками
+2025-04-07 05:15:27 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен или неверный: None
+2025-04-07 05:15:27 - src.core.emulator_manager - ERROR - Не удалось автоматически найти LDPlayer
+2025-04-07 05:15:27 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 05:15:27 - src.core.parallel_executor - WARNING - Эмулятор 7 не запущен, пропускаем
+2025-04-07 05:15:40 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
+2025-04-07 05:15:43 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
+2025-04-07 05:15:45 - src.config.settings - INFO - Настройки успешно сохранены
+2025-04-07 05:15:45 - src.core.emulator_manager - INFO - Установлен путь к LDPlayer: D:\ldp\LDPlayer9
+2025-04-07 05:15:46 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
+2025-04-07 05:15:57 - src.core.parallel_executor - INFO - Остановка обработчика задач
+2025-04-07 05:15:57 - src.core.parallel_executor - INFO - Обработчик задач остановлен
+2025-04-07 05:15:58 - src.core.parallel_executor - INFO - Рабочий поток очереди задач завершен
+2025-04-07 05:15:58 - src.core.emulator_manager - INFO - Инициализация менеджера эмуляторов. Путь к LDPlayer: None
+2025-04-07 05:15:58 - src.core.image_processor - INFO - Инициализация обработчика изображений, загружено 13 шаблонов
+2025-04-07 05:15:58 - src.core.parallel_executor - INFO - Инициализирован глобальный обработчик изображений
+2025-04-07 05:15:58 - src.core.parallel_executor - INFO - Инициализация параллельного исполнителя с максимальным количеством потоков: None
+2025-04-07 05:15:58 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен или неверный: None
+2025-04-07 05:15:58 - src.core.emulator_manager - ERROR - Не удалось автоматически найти LDPlayer
+2025-04-07 05:15:58 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 05:15:58 - src.core.parallel_executor - INFO - Определено количество рабочих потоков: 1
+2025-04-07 05:15:58 - src.core.parallel_executor - INFO - Запущен обработчик задач с 1 рабочими потоками
+2025-04-07 05:15:58 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен или неверный: None
+2025-04-07 05:15:58 - src.core.emulator_manager - ERROR - Не удалось автоматически найти LDPlayer
+2025-04-07 05:15:58 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 05:15:58 - src.core.parallel_executor - WARNING - Эмулятор 7 не запущен, пропускаем
+2025-04-07 05:16:10 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
+2025-04-07 05:16:20 - src.core.parallel_executor - INFO - Остановка обработчика задач
+2025-04-07 05:16:20 - src.core.parallel_executor - INFO - Обработчик задач остановлен
+2025-04-07 05:16:20 - src.core.parallel_executor - INFO - Рабочий поток очереди задач завершен
+2025-04-07 05:16:21 - src.core.emulator_manager - INFO - Инициализация менеджера эмуляторов. Путь к LDPlayer: None
+2025-04-07 05:16:21 - src.core.image_processor - INFO - Инициализация обработчика изображений, загружено 13 шаблонов
+2025-04-07 05:16:21 - src.core.parallel_executor - INFO - Инициализирован глобальный обработчик изображений
+2025-04-07 05:16:21 - src.core.parallel_executor - INFO - Инициализация параллельного исполнителя с максимальным количеством потоков: None
+2025-04-07 05:16:21 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен или неверный: None
+2025-04-07 05:16:21 - src.core.emulator_manager - ERROR - Не удалось автоматически найти LDPlayer
+2025-04-07 05:16:21 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 05:16:21 - src.core.parallel_executor - INFO - Определено количество рабочих потоков: 1
+2025-04-07 05:16:21 - src.core.parallel_executor - INFO - Запущен обработчик задач с 1 рабочими потоками
+2025-04-07 05:16:21 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен или неверный: None
+2025-04-07 05:16:21 - src.core.emulator_manager - ERROR - Не удалось автоматически найти LDPlayer
+2025-04-07 05:16:21 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 05:16:21 - src.core.parallel_executor - WARNING - Эмулятор 7 не запущен, пропускаем
+2025-04-07 05:16:40 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов

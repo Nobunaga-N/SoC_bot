@@ -50,12 +50,6 @@ class EmulatorManager:
     def set_ldplayer_path(self, path: str) -> bool:
         """
         Установка пути к директории LDPlayer.
-
-        Args:
-            path: Путь к директории с LDPlayer
-
-        Returns:
-            True если путь валидный, иначе False
         """
         with self._lock:
             if not os.path.exists(path):
@@ -67,34 +61,71 @@ class EmulatorManager:
                 logger.error(f"ldconsole.exe не найден в указанной директории: {path}")
                 return False
 
+            # Сохраняем путь в настройках
+            from ..config.settings import user_settings
+            user_settings.set("ldplayer_path", path)
+
             self.ldplayer_path = path
             self.ldconsole_path = ldconsole
             logger.info(f"Установлен путь к LDPlayer: {path}")
             return True
 
+    def _try_find_ldplayer(self):
+        """
+        Попытка автоматически найти LDPlayer в стандартных местах.
+        """
+        default_paths = [
+            "C:/Program Files/LDPlayer/LDPlayer9",
+            "C:/LDPlayer/LDPlayer9",
+            "D:/LDPlayer/LDPlayer9",
+            "C:/Program Files (x86)/LDPlayer/LDPlayer9",
+            os.path.expanduser("~/AppData/Local/LDPlayer/LDPlayer9")
+        ]
+
+        for path in default_paths:
+            ldconsole = os.path.join(path, "ldconsole.exe")
+            if os.path.exists(ldconsole):
+                self.ldplayer_path = path
+                self.ldconsole_path = ldconsole
+                logger.info(f"Автоматически найден путь к LDPlayer: {path}")
+
+                # Сохраняем в настройках
+                from ..config.settings import user_settings
+                user_settings.set("ldplayer_path", path)
+
+                return True
+
+        logger.error("Не удалось автоматически найти LDPlayer")
+        return False
+
     def execute_ldconsole(self, command: str) -> str:
         """
         Выполнение команды ldconsole.
-
-        Args:
-            command: Команда для ldconsole
-
-        Returns:
-            Результат выполнения команды
         """
-        if not self.ldconsole_path:
-            logger.error("Путь к ldconsole.exe не установлен")
-            return ""
+        if not self.ldconsole_path or not os.path.exists(self.ldconsole_path):
+            logger.error(f"Путь к ldconsole.exe не установлен или неверный: {self.ldconsole_path}")
+            # Пробуем найти LDPlayer автоматически
+            self._try_find_ldplayer()
+
+            # Повторная проверка
+            if not self.ldconsole_path or not os.path.exists(self.ldconsole_path):
+                return ""
 
         try:
             full_command = f'"{self.ldconsole_path}" {command}'
             logger.debug(f"Выполнение команды LDConsole: {full_command}")
 
-            result = subprocess.check_output(full_command, shell=True, stderr=subprocess.STDOUT)
+            result = subprocess.check_output(full_command, shell=True, stderr=subprocess.STDOUT, timeout=30)
             return result.decode('utf-8', errors='ignore').strip()
         except subprocess.CalledProcessError as e:
             logger.error(f"Ошибка выполнения команды LDConsole: {e}")
             return e.output.decode('utf-8', errors='ignore').strip()
+        except subprocess.TimeoutExpired:
+            logger.error(f"Таймаут выполнения команды LDConsole: {command}")
+            return "ERROR: Timeout"
+        except Exception as e:
+            logger.error(f"Непредвиденная ошибка при выполнении команды LDConsole: {e}")
+            return ""
 
     def list_emulators(self) -> List[Dict[str, str]]:
         """

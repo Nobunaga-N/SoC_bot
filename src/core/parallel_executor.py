@@ -147,12 +147,13 @@ class ParallelEmulatorExecutor:
         self.global_image_processor = ImageProcessor(self.assets_path)
         logger.info(f"Инициализирован глобальный обработчик изображений")
 
-    def initialize_emulator(self, emulator_id: str) -> bool:
+    def initialize_emulator(self, emulator_id: str, check_device: bool = False) -> bool:
         """
         Инициализация ресурсов для конкретного эмулятора.
 
         Args:
             emulator_id: Идентификатор эмулятора
+            check_device: Флаг проверки доступности устройства (может блокировать поток)
 
         Returns:
             True если инициализация успешна, иначе False
@@ -167,10 +168,11 @@ class ParallelEmulatorExecutor:
                 # Создаем контроллер ADB
                 adb_controller = ADBController(emulator_id)
 
-                # Проверяем доступность устройства
-                if not adb_controller.wait_for_device(timeout=10):
-                    logger.error(f"Устройство {emulator_id} недоступно")
-                    return False
+                # Проверяем доступность устройства (только если указан флаг)
+                if check_device:
+                    if not adb_controller.wait_for_device(timeout=5):  # Уменьшаем таймаут до 5 секунд
+                        logger.error(f"Устройство {emulator_id} недоступно")
+                        return False
 
                 # Сохраняем контроллер
                 self.adb_controllers[emulator_id] = adb_controller
@@ -295,7 +297,8 @@ class ParallelEmulatorExecutor:
             Идентификатор задачи или None в случае ошибки
         """
         # Инициализация эмулятора, если он еще не инициализирован
-        if not self.initialize_emulator(emulator_id):
+        # Не проверяем доступность устройства здесь, это может блокировать поток
+        if not self.initialize_emulator(emulator_id, check_device=False):
             return None
 
         # Инициализация движка туториала
@@ -331,11 +334,22 @@ class ParallelEmulatorExecutor:
         """
         try:
             with self.lock:
+                if emulator_id not in self.adb_controllers:
+                    logger.error(f"Контроллер ADB для эмулятора {emulator_id} не инициализирован")
+                    return False
+
+                adb_controller = self.adb_controllers[emulator_id]
+
                 if emulator_id not in self.tutorial_engines:
                     logger.error(f"Движок туториала для эмулятора {emulator_id} не инициализирован")
                     return False
 
                 tutorial_engine = self.tutorial_engines[emulator_id]
+
+            # Проверяем доступность устройства здесь, в рабочем потоке
+            if not adb_controller.wait_for_device(timeout=10):
+                logger.error(f"Устройство {emulator_id} недоступно перед запуском туториала")
+                return False
 
             # Запускаем туториал
             tutorial_engine.start()
@@ -561,6 +575,8 @@ class ParallelEmulatorExecutor:
                                    on_tutorial_complete: Callable = None) -> Dict[int, str]:
         """
         Запуск туториала на нескольких эмуляторах одновременно.
+        Эта функция больше не используется напрямую из MainWindow, так как ее функциональность
+        перемещена в отдельные потоки EmulatorInitWorker и TutorialStartWorker.
 
         Args:
             emulator_indices: Список индексов эмуляторов

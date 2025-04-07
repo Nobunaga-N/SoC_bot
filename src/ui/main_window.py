@@ -129,6 +129,56 @@ class EmulatorInitWorker(QThread):
             self.initialization_failed.emit(str(e))
 
 
+class TutorialStartWorker(QThread):
+    """
+    Рабочий поток для запуска туториалов.
+    Предотвращает блокировку основного потока UI.
+    """
+    tutorial_started = pyqtSignal(dict)  # {emulator_index: task_id}
+    start_failed = pyqtSignal(str)
+    tutorial_progress = pyqtSignal(int, int)  # текущий, всего
+
+    def __init__(self, parallel_executor, emulator_ids, server_ranges, on_step_complete, on_tutorial_complete):
+        super().__init__()
+        self.parallel_executor = parallel_executor
+        self.emulator_ids = emulator_ids  # {emulator_index: adb_id}
+        self.server_ranges = server_ranges  # {emulator_index: (start, end)}
+        self.on_step_complete = on_step_complete
+        self.on_tutorial_complete = on_tutorial_complete
+
+    def run(self):
+        try:
+            task_ids = {}
+            total = len(self.emulator_ids)
+
+            for i, (index, adb_id) in enumerate(self.emulator_ids.items()):
+                # Сигнализируем о прогрессе
+                self.tutorial_progress.emit(i + 1, total)
+
+                # Определяем диапазон серверов для этого эмулятора
+                server_range = self.server_ranges.get(index, (1, 10))
+
+                # Запускаем туториал
+                # Здесь оригинальные колбэки передаются как есть, они будут обернуты внутри метода initialize_tutorial_engine
+                task_id = self.parallel_executor.start_tutorial(
+                    emulator_id=adb_id,
+                    server_range=server_range,
+                    on_step_complete=self.on_step_complete,
+                    on_tutorial_complete=self.on_tutorial_complete
+                )
+
+                if task_id:
+                    task_ids[index] = task_id
+                    logger.info(f"Запущен туториал на эмуляторе {index} (ADB ID: {adb_id}) с задачей {task_id}")
+                else:
+                    logger.error(f"Не удалось запустить туториал на эмуляторе {index}")
+
+            # Сигнализируем о завершении запуска туториалов
+            self.tutorial_started.emit(task_ids)
+        except Exception as e:
+            logger.error(f"Ошибка при запуске туториалов: {e}", exc_info=True)
+            self.start_failed.emit(str(e))
+
 class StatsTracker:
     """
     Класс для отслеживания статистики выполнения бота.
@@ -1102,6 +1152,48 @@ class MainWindow(QMainWindow):
             self.start_server_spin.setValue(1)
             self.end_server_spin.setValue(264)
 
+    def on_tutorials_started(self, task_ids):
+        """
+        Обработка события успешного запуска туториалов.
+
+        Args:
+            task_ids: Словарь {emulator_index: task_id}
+        """
+        if task_ids:
+            # Обновляем UI
+            self.stop_bot_btn.setEnabled(True)
+            self.status_label.setText(f"Бот запущен на {len(task_ids)} эмуляторах")
+            self.update_statistics()
+        else:
+            QMessageBox.warning(self, "Предупреждение", "Не удалось запустить бота ни на одном эмуляторе.")
+            self.start_bot_btn.setEnabled(True)
+            self.status_label.setText("Бот не запущен")
+
+    def on_tutorial_start_failed(self, error_message):
+        """
+        Обработка события ошибки запуска туториалов.
+
+        Args:
+            error_message: Сообщение об ошибке
+        """
+        logger.error(f"Не удалось запустить туториалы: {error_message}")
+        QMessageBox.critical(self, "Ошибка", f"Не удалось запустить туториалы: {error_message}")
+        self.start_bot_btn.setEnabled(True)
+        self.status_label.setText("Бот не запущен")
+
+    def on_tutorial_start_progress(self, current, total):
+        """
+        Обработка события обновления прогресса запуска туториалов.
+
+        Args:
+            current: Текущий номер эмулятора
+            total: Общее количество эмуляторов
+        """
+        # Обновляем индикатор прогресса
+        progress = int(current * 100 / total)
+        self.progress_bar.setValue(progress)
+        self.status_label.setText(f"Запуск туториалов: {current}/{total}")
+
     def on_emulators_initialized(self, emulator_ids):
         """
         Обработка события завершения инициализации эмуляторов.
@@ -1121,39 +1213,29 @@ class MainWindow(QMainWindow):
             # Это поле может понадобиться для дальнейшей работы
             self.emulator_ids = emulator_ids
 
-            # Запускаем туториалы на каждом эмуляторе
-            task_ids = {}
+            # Обновляем статус
+            self.status_label.setText("Запуск туториалов...")
 
-            for index, adb_id in emulator_ids.items():
-                # Определяем диапазон серверов для этого эмулятора
-                server_range = self.server_ranges.get(index, (1, 10))
+            # Создаем и запускаем рабочий поток для запуска туториалов
+            self.tutorial_start_worker = TutorialStartWorker(
+                self.parallel_executor,
+                emulator_ids,
+                self.server_ranges,
+                lambda eid, sid, success: self.handle_step_completed(eid, sid, success),
+                lambda eid, success: self.handle_tutorial_completed(eid, success)
+            )
 
-                # Запускаем туториал
-                task_id = self.parallel_executor.start_tutorial(
-                    emulator_id=adb_id,
-                    server_range=server_range,
-                    on_step_complete=lambda eid, sid, success: self.handle_step_completed(eid, sid, success),
-                    on_tutorial_complete=lambda eid, success: self.handle_tutorial_completed(eid, success)
-                )
+            # Подключаем сигналы
+            self.tutorial_start_worker.tutorial_started.connect(self.on_tutorials_started)
+            self.tutorial_start_worker.start_failed.connect(self.on_tutorial_start_failed)
+            self.tutorial_start_worker.tutorial_progress.connect(self.on_tutorial_start_progress)
 
-                if task_id:
-                    task_ids[index] = task_id
-                    logger.info(f"Запущен туториал на эмуляторе {index} (ADB ID: {adb_id}) с задачей {task_id}")
-                else:
-                    logger.error(f"Не удалось запустить туториал на эмуляторе {index}")
+            # Запускаем рабочий поток
+            self.tutorial_start_worker.start()
 
-            if task_ids:
-                # Обновляем UI
-                self.stop_bot_btn.setEnabled(True)
-                self.status_label.setText(f"Бот запущен на {len(task_ids)} эмуляторах")
-                self.update_statistics()
-            else:
-                QMessageBox.warning(self, "Предупреждение", "Не удалось запустить бота ни на одном эмуляторе.")
-                self.start_bot_btn.setEnabled(True)
-                self.status_label.setText("Бот не запущен")
         except Exception as e:
-            logger.error(f"Ошибка при запуске туториалов: {e}", exc_info=True)
-            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка при запуске туториалов: {str(e)}")
+            logger.error(f"Ошибка при подготовке запуска туториалов: {e}", exc_info=True)
+            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка при подготовке запуска туториалов: {str(e)}")
             self.start_bot_btn.setEnabled(True)
             self.status_label.setText("Бот не запущен")
 

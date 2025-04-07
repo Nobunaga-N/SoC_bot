@@ -1,0 +1,5 @@
+PyQt6>=6.1.0
+opencv-python>=4.5.0
+numpy>=1.20.0
+python-dateutil>=2.8.0
+pytesseract>=0.3.8  # Опционально для улучшенного распознавания текста

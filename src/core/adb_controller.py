@@ -1,0 +1,203 @@
+import os
+import subprocess
+import time
+from typing import Tuple, Optional, List, Union
+import numpy as np
+import cv2
+from ..utils.logger import get_logger
+
+logger = get_logger(__name__)
+
+
+class ADBController:
+    """
+    Класс для взаимодействия с эмулятором через ADB команды.
+    Обеспечивает функционал для отправки команд, получения скриншотов и
+    выполнения действий на устройстве.
+    """
+
+    def __init__(self, emulator_id: str):
+        """
+        Инициализация контроллера ADB для конкретного эмулятора.
+
+        Args:
+            emulator_id: Идентификатор эмулятора (например, 'emulator-5554')
+        """
+        self.emulator_id = emulator_id
+        logger.info(f"Инициализация ADB контроллера для эмулятора {emulator_id}")
+
+    def execute_command(self, command: str) -> str:
+        """
+        Выполнение ADB команды.
+
+        Args:
+            command: ADB команда для выполнения
+
+        Returns:
+            Результат выполнения команды
+        """
+        full_command = f"adb -s {self.emulator_id} {command}"
+        logger.debug(f"Выполнение ADB команды: {full_command}")
+
+        try:
+            result = subprocess.check_output(full_command, shell=True, stderr=subprocess.STDOUT)
+            return result.decode('utf-8').strip()
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Ошибка выполнения ADB команды: {e}")
+            return e.output.decode('utf-8').strip()
+
+    def tap(self, x: int, y: int) -> None:
+        """
+        Выполнить клик по координатам.
+
+        Args:
+            x: Координата x для клика
+            y: Координата y для клика
+        """
+        logger.debug(f"Клик по координатам x={x}, y={y}")
+        self.execute_command(f"shell input tap {x} {y}")
+
+    def swipe(self, start_x: int, start_y: int, end_x: int, end_y: int, duration_ms: int = 300) -> None:
+        """
+        Выполнить свайп от одной точки к другой.
+
+        Args:
+            start_x: Начальная координата x
+            start_y: Начальная координата y
+            end_x: Конечная координата x
+            end_y: Конечная координата y
+            duration_ms: Продолжительность свайпа в миллисекундах
+        """
+        logger.debug(f"Свайп от ({start_x}, {start_y}) к ({end_x}, {end_y}), длительность: {duration_ms}ms")
+        self.execute_command(f"shell input swipe {start_x} {start_y} {end_x} {end_y} {duration_ms}")
+
+    def complex_swipe(self, coordinates: List[Tuple[int, int]], duration_ms: int = 800) -> None:
+        """
+        Выполнить сложный свайп через несколько точек.
+
+        Args:
+            coordinates: Список координат для свайпа [(x1, y1), (x2, y2), ...]
+            duration_ms: Общая продолжительность свайпа в миллисекундах
+        """
+        logger.debug(f"Сложный свайп через точки {coordinates}, длительность: {duration_ms}ms")
+
+        if len(coordinates) < 2:
+            logger.error("Для сложного свайпа требуется минимум 2 точки")
+            return
+
+        # Разделяем общую продолжительность на отдельные свайпы
+        segment_duration = duration_ms // (len(coordinates) - 1)
+
+        for i in range(len(coordinates) - 1):
+            start_x, start_y = coordinates[i]
+            end_x, end_y = coordinates[i + 1]
+            self.swipe(start_x, start_y, end_x, end_y, segment_duration)
+            time.sleep(0.1)  # Небольшая задержка между сегментами
+
+    def get_screenshot(self) -> np.ndarray:
+        """
+        Получить скриншот с эмулятора.
+
+        Returns:
+            Изображение в формате numpy array (BGR)
+        """
+        logger.debug("Получение скриншота с эмулятора")
+        # Получаем скриншот во временный файл в памяти
+        self.execute_command("shell screencap -p /sdcard/screenshot.png")
+
+        # Получаем файл с устройства
+        tmp_file = "/tmp/emulator_screenshot.png"
+        self.execute_command(f"pull /sdcard/screenshot.png {tmp_file}")
+
+        # Читаем изображение
+        img = cv2.imread(tmp_file)
+
+        # Удаляем временный файл
+        os.remove(tmp_file)
+        self.execute_command("shell rm /sdcard/screenshot.png")
+
+        if img is None:
+            logger.error("Не удалось получить скриншот")
+            return np.zeros((1080, 1920, 3), dtype=np.uint8)  # Пустое изображение
+
+        return img
+
+    def press_key(self, key_code: int) -> None:
+        """
+        Нажать клавишу по коду.
+
+        Args:
+            key_code: Код клавиши Android (например, 4 для BACK)
+        """
+        logger.debug(f"Нажатие клавиши с кодом {key_code}")
+        self.execute_command(f"shell input keyevent {key_code}")
+
+    def press_esc(self) -> None:
+        """
+        Нажать клавишу ESC (для закрытия рекламы).
+        """
+        logger.debug("Нажатие клавиши ESC")
+        self.press_key(111)  # Код клавиши ESC
+
+    def start_app(self, package_name: str, activity_name: str = None) -> None:
+        """
+        Запустить приложение на эмуляторе.
+
+        Args:
+            package_name: Имя пакета приложения
+            activity_name: Имя активити для запуска (опционально)
+        """
+        if activity_name:
+            logger.info(f"Запуск приложения {package_name}/{activity_name}")
+            cmd = f"shell am start -n {package_name}/{activity_name}"
+        else:
+            logger.info(f"Запуск приложения {package_name}")
+            cmd = f"shell monkey -p {package_name} -c android.intent.category.LAUNCHER 1"
+
+        self.execute_command(cmd)
+
+    def stop_app(self, package_name: str) -> None:
+        """
+        Остановить приложение на эмуляторе.
+
+        Args:
+            package_name: Имя пакета приложения
+        """
+        logger.info(f"Остановка приложения {package_name}")
+        self.execute_command(f"shell am force-stop {package_name}")
+
+    def is_app_running(self, package_name: str) -> bool:
+        """
+        Проверить, запущено ли приложение.
+
+        Args:
+            package_name: Имя пакета приложения
+
+        Returns:
+            True если приложение запущено, иначе False
+        """
+        result = self.execute_command(f"shell pidof {package_name}")
+        return bool(result.strip())
+
+    def wait_for_device(self, timeout: int = 30) -> bool:
+        """
+        Ожидание, когда устройство будет доступно.
+
+        Args:
+            timeout: Максимальное время ожидания в секундах
+
+        Returns:
+            True если устройство доступно, иначе False
+        """
+        logger.info(f"Ожидание доступности устройства {self.emulator_id}")
+        start_time = time.time()
+
+        while time.time() - start_time < timeout:
+            result = self.execute_command("get-state")
+            if "device" in result:
+                logger.info(f"Устройство {self.emulator_id} доступно")
+                return True
+            time.sleep(1)
+
+        logger.error(f"Устройство {self.emulator_id} не доступно после {timeout}с ожидания")
+        return False

@@ -1,0 +1,36 @@
+2025-04-07 03:05:26 - src.config.settings - INFO - Создание директории: E:\PyProjectsNew\SoC_bot\config
+2025-04-07 03:05:26 - src.config.settings - INFO - Файл настроек не найден, используются настройки по умолчанию
+2025-04-07 03:05:26 - root - INFO - Установлен уровень логирования: INFO
+2025-04-07 03:05:26 - src.core.emulator_manager - INFO - Инициализация менеджера эмуляторов. Путь к LDPlayer: None
+2025-04-07 03:05:26 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:05:26 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:05:31 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:05:31 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:05:36 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:05:36 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:05:41 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:05:41 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:05:46 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:05:46 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:05:49 - src.core.emulator_manager - ERROR - Путь не существует: C:/Program Files/LDPlayer/LDPlayer9
+2025-04-07 03:05:51 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:05:51 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:05:56 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:05:56 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:06:01 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:06:01 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:06:06 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:06:06 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:06:11 - src.core.emulator_manager - ERROR - Путь к ldconsole.exe не установлен
+2025-04-07 03:06:11 - src.core.emulator_manager - INFO - Найдено 0 эмуляторов
+2025-04-07 03:06:14 - src.core.emulator_manager - INFO - Установлен путь к LDPlayer: D:\ldp\LDPlayer9
+2025-04-07 03:06:14 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
+2025-04-07 03:06:16 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
+2025-04-07 03:06:21 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
+2025-04-07 03:06:26 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
+2025-04-07 03:06:31 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
+2025-04-07 03:06:36 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
+2025-04-07 03:06:41 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
+2025-04-07 03:06:46 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
+2025-04-07 03:06:51 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов
+2025-04-07 03:06:51 - src.core.emulator_manager - INFO - Найдено 8 эмуляторов

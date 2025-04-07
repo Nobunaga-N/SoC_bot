@@ -54,6 +54,8 @@ class TutorialEngine:
         self.server_range = server_range or (1, 600)  # По умолчанию все сервера
         self.on_step_complete = on_step_complete
         self.on_tutorial_complete = on_tutorial_complete
+        self.checkpoints = {}
+        self.last_checkpoint_id = None
 
         self.stop_event = Event()  # Событие для остановки выполнения
         self.current_step = None
@@ -123,8 +125,15 @@ class TutorialEngine:
         success = False
 
         try:
-            # Перебираем шаги туториала
-            for step in self.steps:
+            # Определяем начальный индекс шага
+            start_index = getattr(self, '_checkpoint_step_index', 0)
+            if start_index > 0:
+                logger.info(f"Продолжение с шага {self.steps[start_index].id}")
+
+            # Перебираем шаги туториала начиная с заданного индекса
+            for i in range(start_index, len(self.steps)):
+                step = self.steps[i]
+
                 if self.stop_event.is_set():
                     logger.info("Выполнение туториала прервано")
                     break
@@ -142,6 +151,11 @@ class TutorialEngine:
                         # Выполняем действие шага
                         result = step.action(*step.args, **step.kwargs)
                         step_success = True
+
+                        # Если шаг является критичным, сохраняем контрольную точку
+                        if i % 5 == 0:  # Каждый 5-й шаг считаем критичным
+                            self.save_checkpoint()
+
                         break
                     except Exception as e:
                         logger.error(
@@ -169,6 +183,11 @@ class TutorialEngine:
             self.on_tutorial_complete(success)
 
         self.current_step = None
+        # Очищаем информацию о контрольной точке
+        if hasattr(self, '_checkpoint_step_index'):
+            delattr(self, '_checkpoint_step_index')
+
+        return success
 
     # Вспомогательные методы для выполнения шагов
 
@@ -385,20 +404,31 @@ class TutorialEngine:
             # Получаем скриншот
             screenshot = self.adb.get_screenshot()
 
-            # Здесь должна быть логика поиска номера сервера на скриншоте
-            # Для примера используем примитивный подход:
+            # Определяем области экрана, где могут находиться номера серверов
+            # Примерные области (нужно уточнить для вашего разрешения экрана)
+            server_regions = [
+                (200, 150, 100, 30),  # x, y, ширина, высота
+                (200, 200, 100, 30),
+                (200, 250, 100, 30),
+                (200, 300, 100, 30),
+                (200, 350, 100, 30),
+                (200, 400, 100, 30),
+                (200, 450, 100, 30),
+                (200, 500, 100, 30),
+                (200, 550, 100, 30),
+                (200, 600, 100, 30)
+            ]
 
-            # Получаем все видимые номера серверов (в реальности нужно использовать OCR)
-            visible_servers = []
+            # Ищем номера серверов в определенных областях экрана
+            servers = self.image_processor.detect_server_number(screenshot, server_regions)
+            logger.debug(f"Найдены сервера: {servers}")
 
-            # Для тестирования просто предположим, что нашли сервер
-            # В реальном коде здесь должен быть парсинг номеров серверов с экрана
-            if target_server in visible_servers:
-                # Если нашли нужный сервер, кликаем по нему
-                # В реальности координаты клика будут зависеть от положения найденного сервера
-                x, y = 500, 300  # Примерные координаты
+            # Проверяем, найден ли целевой сервер
+            if target_server in servers:
+                # Если нашли нужный сервер, кликаем по его координатам
+                x, y = servers[target_server]
                 self.adb.tap(x, y)
-                logger.info(f"Клик по серверу {target_server}")
+                logger.info(f"Клик по серверу {target_server} на координатах ({x}, {y})")
                 return True
 
             # Если не нашли сервер на текущем экране, прокручиваем вниз
@@ -409,48 +439,42 @@ class TutorialEngine:
                 scroll_count += 1
             else:
                 logger.warning(f"Сервер {target_server} не найден после {max_scrolls} прокруток")
+
+                # Если сервер не найден, возможно он недоступен (забит)
+                # В этом случае можно перейти к следующему серверу в диапазоне
+                logger.info(f"Переход к следующему серверу в диапазоне")
                 return False
 
         return False
 
-    def tutorial_engine_fixes():
-        # Добавление системы контрольных точек
-        def _add_checkpoint_system(self):
-            """
-            Добавляет функциональность контрольных точек для возможности сохранения прогресса.
-            """
-            # Атрибуты для системы контрольных точек
-            self.checkpoints = {}
-            self.last_checkpoint_id = None
+    def save_checkpoint(self, checkpoint_id: str = None):
+        """
+        Сохранение текущего состояния туториала в контрольную точку.
 
-        def save_checkpoint(self, checkpoint_id: str = None):
-            """
-            Сохранение текущего состояния туториала в контрольную точку.
+        Args:
+            checkpoint_id: Идентификатор контрольной точки (если None, генерируется автоматически)
 
-            Args:
-                checkpoint_id: Идентификатор контрольной точки (если None, генерируется автоматически)
+        Returns:
+            Идентификатор сохраненной контрольной точки
+        """
+        if not self.current_step:
+            logger.warning("Невозможно сохранить контрольную точку: туториал не запущен")
+            return None
 
-            Returns:
-                Идентификатор сохраненной контрольной точки
-            """
-            if not self.current_step:
-                logger.warning("Невозможно сохранить контрольную точку: туториал не запущен")
-                return None
+        if checkpoint_id is None:
+            checkpoint_id = f"checkpoint_{self.current_step.id}_{int(time.time())}"
 
-            if checkpoint_id is None:
-                checkpoint_id = f"checkpoint_{self.current_step.id}_{int(time.time())}"
+        # Сохраняем информацию о текущем состоянии
+        self.checkpoints[checkpoint_id] = {
+            "step_id": self.current_step.id,
+            "timestamp": time.time(),
+            "server_range": self.server_range
+        }
 
-            # Сохраняем информацию о текущем состоянии
-            self.checkpoints[checkpoint_id] = {
-                "step_id": self.current_step.id,
-                "timestamp": time.time(),
-                "server_range": self.server_range
-            }
+        self.last_checkpoint_id = checkpoint_id
+        logger.info(f"Сохранена контрольная точка {checkpoint_id} на шаге {self.current_step.id}")
 
-            self.last_checkpoint_id = checkpoint_id
-            logger.info(f"Сохранена контрольная точка {checkpoint_id} на шаге {self.current_step.id}")
-
-            return checkpoint_id
+        return checkpoint_id
 
     def restore_checkpoint(self, checkpoint_id: str = None):
         """
@@ -491,75 +515,3 @@ class TutorialEngine:
 
         logger.info(f"Восстановлена контрольная точка {checkpoint_id} на шаге {checkpoint['step_id']}")
         return True
-
-    def _run_tutorial_with_checkpoints(self):
-        """
-        Модифицированная версия метода _run_tutorial с поддержкой контрольных точек.
-        """
-        logger.info("Начало выполнения туториала")
-        success = False
-
-        try:
-            # Определяем начальный индекс шага
-            start_index = getattr(self, '_checkpoint_step_index', 0)
-            if start_index > 0:
-                logger.info(f"Продолжение с шага {self.steps[start_index].id}")
-
-            # Перебираем шаги туториала начиная с заданного индекса
-            for i in range(start_index, len(self.steps)):
-                step = self.steps[i]
-
-                if self.stop_event.is_set():
-                    logger.info("Выполнение туториала прервано")
-                    break
-
-                self.current_step = step
-                logger.info(f"Выполнение шага {step.id}: {step.description}")
-
-                # Выполняем шаг с заданным количеством попыток
-                step_success = False
-                for attempt in range(step.retry_count):
-                    if self.stop_event.is_set():
-                        break
-
-                    try:
-                        # Выполняем действие шага
-                        result = step.action(*step.args, **step.kwargs)
-                        step_success = True
-
-                        # Если шаг является критичным, сохраняем контрольную точку
-                        if i % 5 == 0:  # Каждый 5-й шаг считаем критичным
-                            self.save_checkpoint()
-
-                        break
-                    except Exception as e:
-                        logger.error(
-                            f"Ошибка при выполнении шага {step.id} (попытка {attempt + 1}/{step.retry_count}): {e}")
-                        if attempt < step.retry_count - 1:
-                            time.sleep(1.0)  # Пауза перед следующей попыткой
-
-                # Вызываем колбэк завершения шага
-                if self.on_step_complete:
-                    self.on_step_complete(step.id, step_success)
-
-                if not step_success:
-                    logger.error(f"Шаг {step.id} не выполнен после {step.retry_count} попыток")
-                    break
-
-            # Если дошли до конца и не было прерывания, считаем туториал успешным
-            success = not self.stop_event.is_set() and self.current_step.id == self.steps[-1].id
-            logger.info(f"Туториал {'успешно завершен' if success else 'не завершен'}")
-
-        except Exception as e:
-            logger.error(f"Неожиданная ошибка при выполнении туториала: {e}", exc_info=True)
-
-        # Вызываем колбэк завершения туториала
-        if self.on_tutorial_complete:
-            self.on_tutorial_complete(success)
-
-        self.current_step = None
-        # Очищаем информацию о контрольной точке
-        if hasattr(self, '_checkpoint_step_index'):
-            delattr(self, '_checkpoint_step_index')
-
-        return success

@@ -345,53 +345,51 @@ class EmulatorManager:
                 return True
         return False
 
-    def emulator_manager_fixes():
-        # Добавление метода для проверки зависания эмулятора
-        def is_emulator_responsive(self, emulator_index: int) -> bool:
-            """
-            Проверка, отвечает ли эмулятор на команды.
+    def is_emulator_responsive(self, emulator_index: int) -> bool:
+        """
+        Проверка, отвечает ли эмулятор на команды.
 
-            Args:
-                emulator_index: Индекс эмулятора
+        Args:
+            emulator_index: Индекс эмулятора
 
-            Returns:
-                True если эмулятор отвечает, иначе False
-            """
-            # Сначала проверяем, запущен ли эмулятор
-            if not self.is_emulator_running(emulator_index):
-                logger.warning(f"Эмулятор {emulator_index} не запущен")
+        Returns:
+            True если эмулятор отвечает, иначе False
+        """
+        # Сначала проверяем, запущен ли эмулятор
+        if not self.is_emulator_running(emulator_index):
+            logger.warning(f"Эмулятор {emulator_index} не запущен")
+            return False
+
+        # Получаем ADB ID
+        adb_id = self.get_emulator_adb_id(emulator_index)
+
+        if not adb_id:
+            logger.error(f"Не удалось получить ADB ID для эмулятора {emulator_index}")
+            return False
+
+        try:
+            # Пытаемся выполнить простую ADB команду
+            result = subprocess.run(
+                f"adb -s {adb_id} shell dumpsys window",
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+
+            # Проверяем код возврата
+            if result.returncode != 0:
+                logger.warning(f"Эмулятор {emulator_index} не отвечает на ADB команды")
                 return False
 
-            # Получаем ADB ID
-            adb_id = self.get_emulator_adb_id(emulator_index)
-
-            if not adb_id:
-                logger.error(f"Не удалось получить ADB ID для эмулятора {emulator_index}")
-                return False
-
-            try:
-                # Пытаемся выполнить простую ADB команду
-                result = subprocess.run(
-                    f"adb -s {adb_id} shell dumpsys window",
-                    shell=True,
-                    capture_output=True,
-                    text=True,
-                    timeout=5
-                )
-
-                # Проверяем код возврата
-                if result.returncode != 0:
-                    logger.warning(f"Эмулятор {emulator_index} не отвечает на ADB команды")
-                    return False
-
-                # Если команда выполнена успешно, эмулятор отвечает
-                return True
-            except subprocess.TimeoutExpired:
-                logger.warning(f"Таймаут при выполнении команды для эмулятора {emulator_index}")
-                return False
-            except Exception as e:
-                logger.error(f"Ошибка при проверке эмулятора {emulator_index}: {e}")
-                return False
+            # Если команда выполнена успешно, эмулятор отвечает
+            return True
+        except subprocess.TimeoutExpired:
+            logger.warning(f"Таймаут при выполнении команды для эмулятора {emulator_index}")
+            return False
+        except Exception as e:
+            logger.error(f"Ошибка при проверке эмулятора {emulator_index}: {e}")
+            return False
 
     def restart_if_unresponsive(self, emulator_index: int, check_interval: int = 30) -> bool:
         """

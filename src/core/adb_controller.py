@@ -46,6 +46,78 @@ class ADBController:
             logger.error(f"Ошибка выполнения ADB команды: {e}")
             return e.output.decode('utf-8').strip()
 
+    def execute_command_with_timeout(self, command: str, timeout: float = 30.0) -> str:
+        """
+        Выполнение ADB команды с таймаутом.
+
+        Args:
+            command: ADB команда для выполнения
+            timeout: Таймаут в секундах
+
+        Returns:
+            Результат выполнения команды
+
+        Raises:
+            ADBError: При ошибке выполнения команды или превышении таймаута
+        """
+        import subprocess
+        import threading
+        from ..utils.exceptions import ADBError
+
+        full_command = f"adb -s {self.emulator_id} {command}"
+        logger.debug(f"Выполнение ADB команды с таймаутом: {full_command}")
+
+        process = subprocess.Popen(
+            full_command,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+
+        # Используем threading.Timer для обеспечения таймаута
+        timer = threading.Timer(timeout, process.kill)
+        try:
+            timer.start()
+            stdout, stderr = process.communicate()
+            if process.returncode != 0:
+                error_msg = stderr.decode('utf-8', errors='ignore').strip()
+                raise ADBError(f"Ошибка выполнения ADB команды: {error_msg}")
+            return stdout.decode('utf-8', errors='ignore').strip()
+        finally:
+            timer.cancel()
+
+    def check_adb_server(self) -> bool:
+        """
+        Проверка состояния ADB сервера и его перезапуск при необходимости.
+
+        Returns:
+            True если ADB сервер работает корректно, иначе False
+        """
+        try:
+            import subprocess
+
+            # Проверяем статус ADB сервера
+            result = subprocess.run("adb devices", shell=True, capture_output=True, text=True)
+
+            # Если в выводе есть "daemon not running", перезапускаем ADB сервер
+            if "daemon not running" in result.stdout or "daemon not running" in result.stderr:
+                logger.warning("ADB сервер не запущен, перезапуск...")
+                subprocess.run("adb kill-server", shell=True)
+                time.sleep(1)
+                subprocess.run("adb start-server", shell=True)
+                time.sleep(2)
+
+                # Проверяем снова
+                result = subprocess.run("adb devices", shell=True, capture_output=True, text=True)
+                if "daemon not running" in result.stdout or "daemon not running" in result.stderr:
+                    logger.error("Не удалось перезапустить ADB сервер")
+                    return False
+
+            return True
+        except Exception as e:
+            logger.error(f"Ошибка при проверке ADB сервера: {e}")
+            return False
+
     def tap(self, x: int, y: int) -> None:
         """
         Выполнить клик по координатам.
@@ -226,77 +298,3 @@ class ADBController:
 
         logger.error(f"Устройство {self.emulator_id} не доступно после {timeout}с ожидания")
         return False
-
-    def adb_controller_fixes():
-        # Добавление метода с таймаутом для выполнения команд
-        def execute_command_with_timeout(self, command: str, timeout: float = 30.0) -> str:
-            """
-            Выполнение ADB команды с таймаутом.
-
-            Args:
-                command: ADB команда для выполнения
-                timeout: Таймаут в секундах
-
-            Returns:
-                Результат выполнения команды
-
-            Raises:
-                ADBError: При ошибке выполнения команды или превышении таймаута
-            """
-            import subprocess
-            import threading
-            from ..utils.exceptions import ADBError
-
-            full_command = f"adb -s {self.emulator_id} {command}"
-            logger.debug(f"Выполнение ADB команды: {full_command}")
-
-            process = subprocess.Popen(
-                full_command,
-                shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-            )
-
-            # Используем threading.Timer для обеспечения таймаута
-            timer = threading.Timer(timeout, process.kill)
-            try:
-                timer.start()
-                stdout, stderr = process.communicate()
-                if process.returncode != 0:
-                    error_msg = stderr.decode('utf-8', errors='ignore').strip()
-                    raise ADBError(f"Ошибка выполнения ADB команды: {error_msg}")
-                return stdout.decode('utf-8', errors='ignore').strip()
-            finally:
-                timer.cancel()
-
-    def check_adb_server(self) -> bool:
-        """
-        Проверка состояния ADB сервера и его перезапуск при необходимости.
-
-        Returns:
-            True если ADB сервер работает корректно, иначе False
-        """
-        try:
-            import subprocess
-
-            # Проверяем статус ADB сервера
-            result = subprocess.run("adb devices", shell=True, capture_output=True, text=True)
-
-            # Если в выводе есть "daemon not running", перезапускаем ADB сервер
-            if "daemon not running" in result.stdout or "daemon not running" in result.stderr:
-                logger.warning("ADB сервер не запущен, перезапуск...")
-                subprocess.run("adb kill-server", shell=True)
-                time.sleep(1)
-                subprocess.run("adb start-server", shell=True)
-                time.sleep(2)
-
-                # Проверяем снова
-                result = subprocess.run("adb devices", shell=True, capture_output=True, text=True)
-                if "daemon not running" in result.stdout or "daemon not running" in result.stderr:
-                    logger.error("Не удалось перезапустить ADB сервер")
-                    return False
-
-            return True
-        except Exception as e:
-            logger.error(f"Ошибка при проверке ADB сервера: {e}")
-            return False

@@ -6,6 +6,7 @@ from typing import List, Dict, Any, Union, Tuple, Optional, Callable
 from ..core.adb_controller import ADBController
 from ..core.image_processor import ImageProcessor
 from .logger import get_logger
+import cv2
 
 logger = get_logger(__name__)
 

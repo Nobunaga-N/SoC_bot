@@ -160,6 +160,11 @@ class MainWindow(QMainWindow):
 
         # Инициализация UI
         self.setup_ui()
+
+        # Добавляем индикаторы прогресса для эмуляторов
+        self._add_emulator_progress_indicators()
+
+        # Инициализация элементов UI для эмуляторов
         self.initialize_emulator_ui_elements()
 
         # Загрузка списка эмуляторов
@@ -264,6 +269,19 @@ class MainWindow(QMainWindow):
         refresh_btn_layout.addWidget(self.stop_emulators_btn)
 
         emulator_layout.addLayout(refresh_btn_layout)
+
+        # Добавляем кнопки сохранения и загрузки настроек
+        settings_btn_layout = QHBoxLayout()
+        save_settings_btn = QPushButton("Сохранить настройки")
+        save_settings_btn.clicked.connect(self.save_settings_to_file)
+        settings_btn_layout.addWidget(save_settings_btn)
+
+        load_settings_btn = QPushButton("Загрузить настройки")
+        load_settings_btn.clicked.connect(self.load_settings_from_file)
+        settings_btn_layout.addWidget(load_settings_btn)
+
+        emulator_layout.addLayout(settings_btn_layout)
+
         emulator_group.setLayout(emulator_layout)
 
         layout.addWidget(emulator_group)
@@ -536,299 +554,297 @@ class MainWindow(QMainWindow):
             thread.run = lambda idx=emulator_index: stop_emulator_thread(idx)
             thread.start()
 
-    def main_window_fixes():
-        # Добавление индикаторов прогресса для каждого эмулятора
-        def _add_emulator_progress_indicators(self):
-            """
-            Добавить индикаторы прогресса для каждого эмулятора.
-            """
-            # Создаем словарь для хранения индикаторов прогресса
-            self.emulator_progress_bars = {}
+    def _add_emulator_progress_indicators(self):
+        """
+        Добавить индикаторы прогресса для каждого эмулятора.
+        """
+        # Создаем словарь для хранения индикаторов прогресса
+        self.emulator_progress_bars = {}
 
-            # Создаем отдельную вкладку для мониторинга эмуляторов
-            self.emulators_tab = QWidget()
-            emulators_layout = QVBoxLayout()
+        # Создаем отдельную вкладку для мониторинга эмуляторов
+        self.emulators_tab = QWidget()
+        emulators_layout = QVBoxLayout()
 
-            # Группа с индикаторами прогресса
-            progress_group = QGroupBox("Прогресс выполнения по эмуляторам")
-            progress_layout = QVBoxLayout()
+        # Группа с индикаторами прогресса
+        progress_group = QGroupBox("Прогресс выполнения по эмуляторам")
+        progress_layout = QVBoxLayout()
 
-            # Добавляем прокручиваемую область для индикаторов
-            scroll_area = QScrollArea()
-            scroll_area.setWidgetResizable(True)
-            scroll_content = QWidget()
-            scroll_layout = QVBoxLayout(scroll_content)
+        # Добавляем прокручиваемую область для индикаторов
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_content = QWidget()
+        scroll_layout = QVBoxLayout(scroll_content)
 
-            # Этот контейнер будет хранить индикаторы
-            self.emulators_progress_container = scroll_layout
+        # Этот контейнер будет хранить индикаторы
+        self.emulators_progress_container = scroll_layout
 
-            scroll_content.setLayout(scroll_layout)
-            scroll_area.setWidget(scroll_content)
-            progress_layout.addWidget(scroll_area)
+        scroll_content.setLayout(scroll_layout)
+        scroll_area.setWidget(scroll_content)
+        progress_layout.addWidget(scroll_area)
 
-            progress_group.setLayout(progress_layout)
-            emulators_layout.addWidget(progress_group)
+        progress_group.setLayout(progress_layout)
+        emulators_layout.addWidget(progress_group)
 
-            # Добавляем кнопки управления
-            control_layout = QHBoxLayout()
+        # Добавляем кнопки управления
+        control_layout = QHBoxLayout()
 
-            # Кнопка обновления статуса эмуляторов
-            self.refresh_emulators_status_btn = QPushButton("Обновить статус")
-            self.refresh_emulators_status_btn.clicked.connect(self.refresh_emulators_status)
-            control_layout.addWidget(self.refresh_emulators_status_btn)
+        # Кнопка обновления статуса эмуляторов
+        self.refresh_emulators_status_btn = QPushButton("Обновить статус")
+        self.refresh_emulators_status_btn.clicked.connect(self.refresh_emulators_status)
+        control_layout.addWidget(self.refresh_emulators_status_btn)
 
-            # Кнопка перезапуска зависших эмуляторов
-            self.restart_unresponsive_btn = QPushButton("Перезапустить зависшие")
-            self.restart_unresponsive_btn.clicked.connect(self.restart_unresponsive_emulators)
-            control_layout.addWidget(self.restart_unresponsive_btn)
+        # Кнопка перезапуска зависших эмуляторов
+        self.restart_unresponsive_btn = QPushButton("Перезапустить зависшие")
+        self.restart_unresponsive_btn.clicked.connect(self.restart_unresponsive_emulators)
+        control_layout.addWidget(self.restart_unresponsive_btn)
 
-            emulators_layout.addLayout(control_layout)
+        emulators_layout.addLayout(control_layout)
 
-            # Добавляем таблицу со статусом эмуляторов
-            self.emulators_status_table = QTableWidget(0, 5)
-            self.emulators_status_table.setHorizontalHeaderLabels(
-                ["Индекс", "Имя", "Статус", "Сервер", "Прогресс"])
-            self.emulators_status_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-            emulators_layout.addWidget(self.emulators_status_table)
+        # Добавляем таблицу со статусом эмуляторов
+        self.emulators_status_table = QTableWidget(0, 5)
+        self.emulators_status_table.setHorizontalHeaderLabels(
+            ["Индекс", "Имя", "Статус", "Сервер", "Прогресс"])
+        self.emulators_status_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        emulators_layout.addWidget(self.emulators_status_table)
 
-            self.emulators_tab.setLayout(emulators_layout)
+        self.emulators_tab.setLayout(emulators_layout)
 
-            # Добавляем вкладку в основной виджет вкладок
-            self.tabs.addTab(self.emulators_tab, "Эмуляторы")
+        # Добавляем вкладку в основной виджет вкладок
+        self.tabs.addTab(self.emulators_tab, "Эмуляторы")
 
-        def update_emulator_progress(self, emulator_index, step_id, success):
-            """
-            Обновить индикатор прогресса для конкретного эмулятора.
+    def update_emulator_progress(self, emulator_index, step_id, success):
+        """
+        Обновить индикатор прогресса для конкретного эмулятора.
 
-            Args:
-                emulator_index: Индекс эмулятора
-                step_id: ID текущего шага
-                success: Флаг успешного выполнения
-            """
-            # Если для этого эмулятора еще нет индикатора, создаем его
-            if emulator_index not in self.emulator_progress_bars:
-                # Создаем контейнер для этого эмулятора
-                emulator_container = QWidget()
-                emulator_layout = QVBoxLayout(emulator_container)
+        Args:
+            emulator_index: Индекс эмулятора
+            step_id: ID текущего шага
+            success: Флаг успешного выполнения
+        """
+        # Если для этого эмулятора еще нет индикатора, создаем его
+        if emulator_index not in self.emulator_progress_bars:
+            # Создаем контейнер для этого эмулятора
+            emulator_container = QWidget()
+            emulator_layout = QVBoxLayout(emulator_container)
 
-                # Добавляем метку с информацией об эмуляторе
-                emulator_label = QLabel(f"Эмулятор {emulator_index}")
-                emulator_label.setStyleSheet("font-weight: bold;")
-                emulator_layout.addWidget(emulator_label)
+            # Добавляем метку с информацией об эмуляторе
+            emulator_label = QLabel(f"Эмулятор {emulator_index}")
+            emulator_label.setStyleSheet("font-weight: bold;")
+            emulator_layout.addWidget(emulator_label)
 
-                # Добавляем метку с текущим шагом
-                step_label = QLabel("Текущий шаг: -")
-                emulator_layout.addWidget(step_label)
+            # Добавляем метку с текущим шагом
+            step_label = QLabel("Текущий шаг: -")
+            emulator_layout.addWidget(step_label)
 
-                # Добавляем индикатор прогресса
-                progress_bar = QProgressBar()
-                progress_bar.setRange(0, 126)  # 126 шагов в туториале
-                progress_bar.setValue(0)
-                emulator_layout.addWidget(progress_bar)
+            # Добавляем индикатор прогресса
+            progress_bar = QProgressBar()
+            progress_bar.setRange(0, 126)  # 126 шагов в туториале
+            progress_bar.setValue(0)
+            emulator_layout.addWidget(progress_bar)
 
-                # Сохраняем ссылки на виджеты
-                self.emulator_progress_bars[emulator_index] = {
-                    "container": emulator_container,
-                    "step_label": step_label,
-                    "progress_bar": progress_bar
-                }
-
-                # Добавляем контейнер в основной контейнер
-                self.emulators_progress_container.addWidget(emulator_container)
-
-            # Получаем виджеты для этого эмулятора
-            widgets = self.emulator_progress_bars[emulator_index]
-
-            # Обновляем метку с текущим шагом
-            widgets["step_label"].setText(f"Текущий шаг: {step_id}")
-
-            # Обновляем индикатор прогресса
-            if step_id.startswith("step"):
-                try:
-                    step_num = int(step_id[4:])
-                    widgets["progress_bar"].setValue(step_num)
-
-                    # Устанавливаем цвет в зависимости от успешности выполнения
-                    if success:
-                        widgets["progress_bar"].setStyleSheet("QProgressBar::chunk { background-color: #4CAF50; }")
-                    else:
-                        widgets["progress_bar"].setStyleSheet("QProgressBar::chunk { background-color: #F44336; }")
-                except ValueError:
-                    pass
-
-            # Обновляем таблицу статуса эмуляторов
-            self.update_emulators_status_table()
-
-        def refresh_emulators_status(self):
-            """
-            Обновить статус всех эмуляторов.
-            """
-            # Обновляем список эмуляторов
-            self.refresh_emulators()
-
-            # Обновляем таблицу статуса
-            self.update_emulators_status_table()
-
-        def update_emulators_status_table(self):
-            """
-            Обновить таблицу статуса эмуляторов.
-            """
-            # Получаем информацию о всех эмуляторах
-            emulators = self.emulator_manager.list_emulators()
-
-            # Очищаем таблицу
-            self.emulators_status_table.setRowCount(0)
-
-            # Добавляем строки для каждого эмулятора
-            for i, emu in enumerate(emulators):
-                self.emulators_status_table.insertRow(i)
-
-                # Индекс
-                index_item = QTableWidgetItem(emu["index"])
-                self.emulators_status_table.setItem(i, 0, index_item)
-
-                # Имя
-                name_item = QTableWidgetItem(emu["name"])
-                self.emulators_status_table.setItem(i, 1, name_item)
-
-                # Статус
-                status_item = QTableWidgetItem(emu["status"])
-                if emu["status"] == "running":
-                    status_item.setForeground(QColor(Qt.GlobalColor.green))
-                else:
-                    status_item.setForeground(QColor(Qt.GlobalColor.gray))
-                self.emulators_status_table.setItem(i, 2, status_item)
-
-                # Сервер (если есть активная задача)
-                server_item = QTableWidgetItem("-")
-                if emu["index"] in self.bot_workers:
-                    server_range = self.bot_workers[emu["index"]].server_range
-                    server_item.setText(f"{server_range[0]}-{server_range[1]}")
-                self.emulators_status_table.setItem(i, 3, server_item)
-
-                # Прогресс (если есть)
-                progress_item = QTableWidgetItem("-")
-                if emu["index"] in self.emulator_progress_bars:
-                    progress = self.emulator_progress_bars[emu["index"]]["progress_bar"].value()
-                    progress_item.setText(f"{progress}/126 ({int(progress / 1.26)}%)")
-                self.emulators_status_table.setItem(i, 4, progress_item)
-
-        def restart_unresponsive_emulators(self):
-            """
-            Перезапустить зависшие эмуляторы.
-            """
-            # Получаем список всех эмуляторов
-            emulators = self.emulator_manager.list_emulators()
-
-            restarted = 0
-            for emu in emulators:
-                if emu["status"] == "running":
-                    # Проверяем, отвечает ли эмулятор
-                    if not self.emulator_manager.is_emulator_responsive(int(emu["index"])):
-                        # Перезапускаем эмулятор
-                        success = self.emulator_manager.restart_if_unresponsive(int(emu["index"]))
-                        if success:
-                            restarted += 1
-
-            # Сообщаем о результате
-            if restarted > 0:
-                QMessageBox.information(self, "Перезапуск эмуляторов",
-                                        f"Успешно перезапущено {restarted} эмуляторов")
-            else:
-                QMessageBox.information(self, "Перезапуск эмуляторов",
-                                        "Все эмуляторы отвечают, перезапуск не требуется")
-
-            # Обновляем статус
-            self.refresh_emulators_status()
-
-        def save_settings_to_file(self):
-            """
-            Сохранить настройки в файл.
-            """
-            # Создаем словарь с настройками
-            settings = {
-                "ldplayer_path": self.ldplayer_path_combo.currentText(),
-                "start_server": self.start_server_spin.value(),
-                "end_server": self.end_server_spin.value(),
-                "selected_season": self.season_combo.currentText()
+            # Сохраняем ссылки на виджеты
+            self.emulator_progress_bars[emulator_index] = {
+                "container": emulator_container,
+                "step_label": step_label,
+                "progress_bar": progress_bar
             }
 
-            # Сохраняем выбранные эмуляторы
-            selected_emulators = []
-            for item in self.emulators_list.selectedItems():
-                selected_emulators.append(item.data(Qt.ItemDataRole.UserRole))
-            settings["selected_emulators"] = selected_emulators
+            # Добавляем контейнер в основной контейнер
+            self.emulators_progress_container.addWidget(emulator_container)
+
+        # Получаем виджеты для этого эмулятора
+        widgets = self.emulator_progress_bars[emulator_index]
+
+        # Обновляем метку с текущим шагом
+        widgets["step_label"].setText(f"Текущий шаг: {step_id}")
+
+        # Обновляем индикатор прогресса
+        if step_id.startswith("step"):
+            try:
+                step_num = int(step_id[4:])
+                widgets["progress_bar"].setValue(step_num)
+
+                # Устанавливаем цвет в зависимости от успешности выполнения
+                if success:
+                    widgets["progress_bar"].setStyleSheet("QProgressBar::chunk { background-color: #4CAF50; }")
+                else:
+                    widgets["progress_bar"].setStyleSheet("QProgressBar::chunk { background-color: #F44336; }")
+            except ValueError:
+                pass
+
+        # Обновляем таблицу статуса эмуляторов
+        self.update_emulators_status_table()
+
+    def refresh_emulators_status(self):
+        """
+        Обновить статус всех эмуляторов.
+        """
+        # Обновляем список эмуляторов
+        self.refresh_emulators()
+
+        # Обновляем таблицу статуса
+        self.update_emulators_status_table()
+
+    def update_emulators_status_table(self):
+        """
+        Обновить таблицу статуса эмуляторов.
+        """
+        # Получаем информацию о всех эмуляторах
+        emulators = self.emulator_manager.list_emulators()
+
+        # Очищаем таблицу
+        self.emulators_status_table.setRowCount(0)
+
+        # Добавляем строки для каждого эмулятора
+        for i, emu in enumerate(emulators):
+            self.emulators_status_table.insertRow(i)
+
+            # Индекс
+            index_item = QTableWidgetItem(emu["index"])
+            self.emulators_status_table.setItem(i, 0, index_item)
+
+            # Имя
+            name_item = QTableWidgetItem(emu["name"])
+            self.emulators_status_table.setItem(i, 1, name_item)
+
+            # Статус
+            status_item = QTableWidgetItem(emu["status"])
+            if emu["status"] == "running":
+                status_item.setForeground(QColor(Qt.GlobalColor.green))
+            else:
+                status_item.setForeground(QColor(Qt.GlobalColor.gray))
+            self.emulators_status_table.setItem(i, 2, status_item)
+
+            # Сервер (если есть активная задача)
+            server_item = QTableWidgetItem("-")
+            if hasattr(self, 'bot_workers') and emu["index"] in self.bot_workers:
+                server_range = self.bot_workers[emu["index"]].server_range
+                server_item.setText(f"{server_range[0]}-{server_range[1]}")
+            self.emulators_status_table.setItem(i, 3, server_item)
+
+            # Прогресс (если есть)
+            progress_item = QTableWidgetItem("-")
+            if emu["index"] in self.emulator_progress_bars:
+                progress = self.emulator_progress_bars[emu["index"]]["progress_bar"].value()
+                progress_item.setText(f"{progress}/126 ({int(progress / 1.26)}%)")
+            self.emulators_status_table.setItem(i, 4, progress_item)
+
+    def restart_unresponsive_emulators(self):
+        """
+        Перезапустить зависшие эмуляторы.
+        """
+        # Получаем список всех эмуляторов
+        emulators = self.emulator_manager.list_emulators()
+
+        restarted = 0
+        for emu in emulators:
+            if emu["status"] == "running":
+                # Проверяем, отвечает ли эмулятор
+                if not self.emulator_manager.is_emulator_responsive(int(emu["index"])):
+                    # Перезапускаем эмулятор
+                    success = self.emulator_manager.restart_if_unresponsive(int(emu["index"]))
+                    if success:
+                        restarted += 1
+
+        # Сообщаем о результате
+        if restarted > 0:
+            QMessageBox.information(self, "Перезапуск эмуляторов",
+                                    f"Успешно перезапущено {restarted} эмуляторов")
+        else:
+            QMessageBox.information(self, "Перезапуск эмуляторов",
+                                    "Все эмуляторы отвечают, перезапуск не требуется")
+
+        # Обновляем статус
+        self.refresh_emulators_status()
+
+    def save_settings_to_file(self):
+        """
+        Сохранить настройки в файл.
+        """
+        # Создаем словарь с настройками
+        settings = {
+            "ldplayer_path": self.ldplayer_path_combo.currentText(),
+            "start_server": self.start_server_spin.value(),
+            "end_server": self.end_server_spin.value(),
+            "selected_season": self.season_combo.currentText()
+        }
+
+        # Сохраняем выбранные эмуляторы
+        selected_emulators = []
+        for item in self.emulators_list.selectedItems():
+            selected_emulators.append(item.data(Qt.ItemDataRole.UserRole))
+        settings["selected_emulators"] = selected_emulators
+
+        # Сохраняем настройки в файл
+        try:
+            import json
+            from pathlib import Path
+
+            # Создаем директорию config, если она не существует
+            config_dir = Path("config")
+            config_dir.mkdir(exist_ok=True)
 
             # Сохраняем настройки в файл
-            try:
-                import json
-                from pathlib import Path
+            with open(config_dir / "ui_settings.json", "w", encoding="utf-8") as f:
+                json.dump(settings, f, indent=4)
 
-                # Создаем директорию config, если она не существует
-                config_dir = Path("config")
-                config_dir.mkdir(exist_ok=True)
+            QMessageBox.information(self, "Сохранение настроек", "Настройки успешно сохранены")
+        except Exception as e:
+            QMessageBox.warning(self, "Ошибка", f"Не удалось сохранить настройки: {e}")
 
-                # Сохраняем настройки в файл
-                with open(config_dir / "ui_settings.json", "w", encoding="utf-8") as f:
-                    json.dump(settings, f, indent=4)
+    def load_settings_from_file(self):
+        """
+        Загрузить настройки из файла.
+        """
+        try:
+            import json
+            from pathlib import Path
 
-                QMessageBox.information(self, "Сохранение настроек", "Настройки успешно сохранены")
-            except Exception as e:
-                QMessageBox.warning(self, "Ошибка", f"Не удалось сохранить настройки: {e}")
+            # Путь к файлу настроек
+            settings_file = Path("config/ui_settings.json")
 
-        def load_settings_from_file(self):
-            """
-            Загрузить настройки из файла.
-            """
-            try:
-                import json
-                from pathlib import Path
+            # Проверяем, существует ли файл
+            if not settings_file.exists():
+                QMessageBox.information(self, "Загрузка настроек",
+                                        "Файл настроек не найден. Будут использованы настройки по умолчанию.")
+                return
 
-                # Путь к файлу настроек
-                settings_file = Path("config/ui_settings.json")
+            # Загружаем настройки из файла
+            with open(settings_file, "r", encoding="utf-8") as f:
+                settings = json.load(f)
 
-                # Проверяем, существует ли файл
-                if not settings_file.exists():
-                    QMessageBox.information(self, "Загрузка настроек",
-                                            "Файл настроек не найден. Будут использованы настройки по умолчанию.")
-                    return
+            # Применяем настройки
+            if "ldplayer_path" in settings:
+                index = self.ldplayer_path_combo.findText(settings["ldplayer_path"])
+                if index >= 0:
+                    self.ldplayer_path_combo.setCurrentIndex(index)
+                else:
+                    self.ldplayer_path_combo.setCurrentText(settings["ldplayer_path"])
 
-                # Загружаем настройки из файла
-                with open(settings_file, "r", encoding="utf-8") as f:
-                    settings = json.load(f)
+            if "start_server" in settings:
+                self.start_server_spin.setValue(settings["start_server"])
 
-                # Применяем настройки
-                if "ldplayer_path" in settings:
-                    index = self.ldplayer_path_combo.findText(settings["ldplayer_path"])
-                    if index >= 0:
-                        self.ldplayer_path_combo.setCurrentIndex(index)
-                    else:
-                        self.ldplayer_path_combo.setCurrentText(settings["ldplayer_path"])
+            if "end_server" in settings:
+                self.end_server_spin.setValue(settings["end_server"])
 
-                if "start_server" in settings:
-                    self.start_server_spin.setValue(settings["start_server"])
+            if "selected_season" in settings:
+                index = self.season_combo.findText(settings["selected_season"])
+                if index >= 0:
+                    self.season_combo.setCurrentIndex(index)
 
-                if "end_server" in settings:
-                    self.end_server_spin.setValue(settings["end_server"])
+            # Загружаем список эмуляторов
+            self.refresh_emulators()
 
-                if "selected_season" in settings:
-                    index = self.season_combo.findText(settings["selected_season"])
-                    if index >= 0:
-                        self.season_combo.setCurrentIndex(index)
+            # Выбираем сохраненные эмуляторы
+            if "selected_emulators" in settings:
+                for i in range(self.emulators_list.count()):
+                    item = self.emulators_list.item(i)
+                    if item.data(Qt.ItemDataRole.UserRole) in settings["selected_emulators"]:
+                        item.setSelected(True)
 
-                # Загружаем список эмуляторов
-                self.refresh_emulators()
-
-                # Выбираем сохраненные эмуляторы
-                if "selected_emulators" in settings:
-                    for i in range(self.emulators_list.count()):
-                        item = self.emulators_list.item(i)
-                        if item.data(Qt.ItemDataRole.UserRole) in settings["selected_emulators"]:
-                            item.setSelected(True)
-
-                QMessageBox.information(self, "Загрузка настроек", "Настройки успешно загружены")
-            except Exception as e:
-                QMessageBox.warning(self, "Ошибка", f"Не удалось загрузить настройки: {e}")
+            QMessageBox.information(self, "Загрузка настроек", "Настройки успешно загружены")
+        except Exception as e:
+            QMessageBox.warning(self, "Ошибка", f"Не удалось загрузить настройки: {e}")
 
     def initialize_emulator_ui_elements(self):
         """
@@ -1037,27 +1053,7 @@ class MainWindow(QMainWindow):
                 pass
 
         # Обновляем индивидуальный прогресс для конкретного эмулятора
-        # (если у вас реализованы отдельные индикаторы прогресса для каждого эмулятора)
-        if hasattr(self, 'emulator_progress_bars') and emulator_index in self.emulator_progress_bars:
-            progress_bar = self.emulator_progress_bars[emulator_index]
-            if step_id.startswith("step"):
-                try:
-                    step_num = int(step_id[4:])
-                    progress_bar.setValue(step_num)
-
-                    # Меняем цвет в зависимости от успеха
-                    if success:
-                        progress_bar.setStyleSheet("QProgressBar::chunk { background-color: #4CAF50; }")
-                    else:
-                        progress_bar.setStyleSheet("QProgressBar::chunk { background-color: #F44336; }")
-                except ValueError:
-                    pass
-
-        # Обновляем текст статуса для этого эмулятора
-        if hasattr(self, 'emulator_status_labels') and emulator_index in self.emulator_status_labels:
-            status_label = self.emulator_status_labels[emulator_index]
-            status_label.setText(f"Выполняется шаг: {step_id}")
-            status_label.setStyleSheet("color: blue;")
+        self.update_emulator_progress(emulator_index, step_id, success)
 
     def handle_tutorial_completed(self, emulator_id, success):
         """
@@ -1090,7 +1086,11 @@ class MainWindow(QMainWindow):
         if emulator_index is not None:
             # Обновляем индикатор прогресса
             if hasattr(self, 'emulator_progress_bars') and emulator_index in self.emulator_progress_bars:
-                progress_bar = self.emulator_progress_bars[emulator_index]
+                if isinstance(self.emulator_progress_bars[emulator_index], dict):
+                    progress_bar = self.emulator_progress_bars[emulator_index]["progress_bar"]
+                else:
+                    progress_bar = self.emulator_progress_bars[emulator_index]
+
                 if success:
                     progress_bar.setValue(126)  # Максимальное значение
                     progress_bar.setStyleSheet("QProgressBar::chunk { background-color: #4CAF50; }")
@@ -1231,8 +1231,13 @@ class MainWindow(QMainWindow):
             event: Событие закрытия
         """
         # Останавливаем всех ботов
-        for worker in self.bot_workers.values():
-            worker.stop()
+        if hasattr(self, 'bot_workers'):
+            for worker in self.bot_workers.values():
+                worker.stop()
+
+        # Останавливаем параллельный исполнитель
+        if hasattr(self, 'parallel_executor'):
+            self.parallel_executor.stop()
 
         # Удаляем обработчик логов
         if self.ui_logger_handler:

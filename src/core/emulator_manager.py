@@ -99,12 +99,10 @@ class EmulatorManager:
     def list_emulators(self) -> List[Dict[str, str]]:
         """
         Получение списка всех эмуляторов LDPlayer.
-
-        Returns:
-            Список эмуляторов в формате [{index: "0", name: "LDPlayer-0", status: "running"}, ...]
         """
         with self._lock:
             result = self.execute_ldconsole("list2")
+            logger.debug(f"Результат команды list2: {result}")
             emulators = []
 
             for line in result.splitlines():
@@ -112,11 +110,18 @@ class EmulatorManager:
                     continue
 
                 parts = line.split(',')
+
                 if len(parts) >= 3:
+                    emulator_index = parts[0]
+
+                    # Проверяем статус напрямую через isrunning
+                    running_result = self.execute_ldconsole(f"isrunning --index {emulator_index}")
+                    is_running = "running" in running_result.lower() or "1" in running_result
+
                     emulator = {
-                        "index": parts[0],
+                        "index": emulator_index,
                         "name": parts[1],
-                        "status": "running" if parts[2] == "1" else "stopped"
+                        "status": "running" if is_running else "stopped"
                     }
                     emulators.append(emulator)
 
@@ -154,32 +159,55 @@ class EmulatorManager:
     def get_emulator_adb_id(self, emulator_index: int) -> Optional[str]:
         """
         Получение ADB ID для эмулятора LDPlayer по его индексу.
-
-        Args:
-            emulator_index: Индекс эмулятора
-
-        Returns:
-            ADB ID эмулятора или None
         """
         with self._lock:
-            if str(emulator_index) in self.active_emulators.values():
+            try:
                 # Если уже знаем ID, вернем его
                 for adb_id, idx in self.active_emulators.items():
                     if idx == str(emulator_index):
+                        logger.info(f"Используем сохраненный ADB ID для эмулятора {emulator_index}: {adb_id}")
                         return adb_id
 
-            # Получаем информацию о порте эмулятора
-            result = self.execute_ldconsole(f"adb --index {emulator_index} --command \"get-serialno\"")
+                # Проверяем, запущен ли эмулятор
+                if not self.is_emulator_running(emulator_index):
+                    # Пробуем запустить эмулятор, если он не запущен
+                    logger.info(f"Эмулятор {emulator_index} не запущен, пробуем запустить")
+                    self.start_emulator(emulator_index)
+                    time.sleep(5)  # Ждем запуска
 
-            if result:
-                # Типичный формат: emulator-5554 или 127.0.0.1:5555
-                device_id = result.strip()
-                self.active_emulators[device_id] = str(emulator_index)
-                logger.info(f"Получен ADB ID для эмулятора {emulator_index}: {device_id}")
-                return device_id
+                # Получаем ADB ID через LDConsole
+                logger.debug(f"Получение ADB ID для эмулятора {emulator_index}")
+                result = self.execute_ldconsole(f"adb --index {emulator_index} --command \"get-serialno\"")
 
-            logger.error(f"Не удалось получить ADB ID для эмулятора {emulator_index}")
-            return None
+                if result and result.strip():
+                    device_id = result.strip()
+                    self.active_emulators[device_id] = str(emulator_index)
+                    logger.info(f"Получен ADB ID для эмулятора {emulator_index}: {device_id}")
+                    return device_id
+
+                # Альтернативный способ - получить через список устройств ADB
+                adb_devices = self.get_adb_devices()
+
+                # Для LDPlayer обычно используется порт 5554 + 2*index или 5555 + 2*index
+                expected_port1 = 5554 + emulator_index * 2
+                expected_port2 = 5555 + emulator_index * 2
+
+                for device_id, status in adb_devices.items():
+                    if status == "device" and (
+                            f"emulator-{expected_port1}" in device_id or
+                            f"127.0.0.1:{expected_port2}" in device_id
+                    ):
+                        self.active_emulators[device_id] = str(emulator_index)
+                        logger.info(
+                            f"Получен ADB ID для эмулятора {emulator_index} через список устройств: {device_id}")
+                        return device_id
+
+                logger.error(f"Не удалось получить ADB ID для эмулятора {emulator_index}")
+                return None
+
+            except Exception as e:
+                logger.error(f"Ошибка при получении ADB ID для эмулятора {emulator_index}: {e}")
+                return None
 
     def start_emulator(self, emulator_index: int) -> bool:
         """

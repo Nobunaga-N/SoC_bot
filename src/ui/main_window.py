@@ -232,7 +232,7 @@ class MainWindow(QMainWindow):
         # Запуск таймера для обновления статуса
         self.status_timer = QTimer(self)
         self.status_timer.timeout.connect(self.update_status)
-        self.status_timer.start(5000)  # Обновление каждые 5 секунд
+        self.status_timer.start(30000)  # Обновление каждые 5 секунд
 
     def setup_ui(self):
         """
@@ -539,8 +539,13 @@ class MainWindow(QMainWindow):
 
     def refresh_emulators(self):
         """
-        Обновление списка доступных эмуляторов.
+        Обновление списка доступных эмуляторов с сохранением выбора.
         """
+        # Сохраняем текущий выбор
+        selected_indices = []
+        for item in self.emulators_list.selectedItems():
+            selected_indices.append(item.data(Qt.ItemDataRole.UserRole))
+
         self.emulators_list.clear()
 
         emulators = self.emulator_manager.list_emulators()
@@ -556,6 +561,10 @@ class MainWindow(QMainWindow):
                 item.setForeground(QColor(Qt.GlobalColor.gray))
 
             self.emulators_list.addItem(item)
+
+            # Восстанавливаем выбор
+            if emu['index'] in selected_indices:
+                item.setSelected(True)
 
     def start_selected_emulators(self):
         """
@@ -1025,47 +1034,51 @@ class MainWindow(QMainWindow):
         """
         Запуск бота на выбранных эмуляторах.
         """
-        selected_items = self.emulators_list.selectedItems()
+        try:
+            selected_items = self.emulators_list.selectedItems()
 
-        if not selected_items:
-            QMessageBox.warning(self, "Предупреждение", "Не выбрано ни одного эмулятора.")
-            return
+            if not selected_items:
+                QMessageBox.warning(self, "Предупреждение", "Не выбрано ни одного эмулятора.")
+                return
 
-        start_server = self.start_server_spin.value()
-        end_server = self.end_server_spin.value()
+            start_server = self.start_server_spin.value()
+            end_server = self.end_server_spin.value()
 
-        if start_server > end_server:
-            QMessageBox.warning(self, "Предупреждение", "Начальный сервер должен быть меньше или равен конечному.")
-            return
+            if start_server > end_server:
+                QMessageBox.warning(self, "Предупреждение", "Начальный сервер должен быть меньше или равен конечному.")
+                return
 
-        # Получаем индексы выбранных эмуляторов
-        emulator_indices = []
-        for item in selected_items:
-            emulator_indices.append(int(item.data(Qt.ItemDataRole.UserRole)))
+            # Получаем индексы выбранных эмуляторов
+            emulator_indices = []
+            for item in selected_items:
+                emulator_indices.append(int(item.data(Qt.ItemDataRole.UserRole)))
 
-        # Подготавливаем диапазоны серверов для каждого эмулятора
-        server_ranges = {}
-        for idx in emulator_indices:
-            server_ranges[idx] = (start_server, end_server)
+            # Подготавливаем диапазоны серверов для каждого эмулятора
+            server_ranges = {}
+            for idx in emulator_indices:
+                server_ranges[idx] = (start_server, end_server)
 
-        # Запускаем параллельное выполнение
-        self.parallel_executor.start()
+            # Запускаем параллельное выполнение
+            self.parallel_executor.start()
 
-        task_ids = self.parallel_executor.process_multiple_emulators(
-            emulator_indices=emulator_indices,
-            server_ranges=server_ranges,
-            on_step_complete=self.handle_step_completed,
-            on_tutorial_complete=self.handle_tutorial_completed
-        )
+            task_ids = self.parallel_executor.process_multiple_emulators(
+                emulator_indices=emulator_indices,
+                server_ranges=server_ranges,
+                on_step_complete=self.handle_step_completed,
+                on_tutorial_complete=self.handle_tutorial_completed
+            )
 
-        if task_ids:
-            # Обновляем UI
-            self.start_bot_btn.setEnabled(False)
-            self.stop_bot_btn.setEnabled(True)
-            self.status_label.setText(f"Бот запущен на {len(task_ids)} эмуляторах")
-            self.update_statistics()
-        else:
-            QMessageBox.warning(self, "Предупреждение", "Не удалось запустить бота ни на одном эмуляторе.")
+            if task_ids:
+                # Обновляем UI
+                self.start_bot_btn.setEnabled(False)
+                self.stop_bot_btn.setEnabled(True)
+                self.status_label.setText(f"Бот запущен на {len(task_ids)} эмуляторах")
+                self.update_statistics()
+            else:
+                QMessageBox.warning(self, "Предупреждение", "Не удалось запустить бота ни на одном эмуляторе.")
+        except Exception as e:
+            logger.error(f"Ошибка при запуске бота: {e}", exc_info=True)
+            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка при запуске бота: {str(e)}")
 
     def stop_bot(self):
         """

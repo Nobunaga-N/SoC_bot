@@ -79,7 +79,7 @@ class ParallelEmulatorExecutor:
     Класс для параллельного выполнения задач на нескольких эмуляторах.
     """
 
-    def __init__(self, assets_path: str, max_workers: int = None, timeout: float = 600.0):
+    def __init__(self, assets_path: str, max_workers: int = None, timeout: float = 600.0, emulator_manager=None):
         """
         Инициализация исполнителя задач.
 
@@ -87,11 +87,20 @@ class ParallelEmulatorExecutor:
             assets_path: Путь к директории с изображениями-шаблонами
             max_workers: Максимальное количество рабочих потоков (если None, то равно количеству эмуляторов)
             timeout: Таймаут выполнения задачи в секундах
+            emulator_manager: Существующий экземпляр EmulatorManager (если None, создается новый)
         """
         self.assets_path = assets_path
         self.max_workers = max_workers
         self.timeout = timeout
-        self.emulator_manager = EmulatorManager()
+
+        # Используем переданный экземпляр EmulatorManager или создаем новый
+        if emulator_manager is not None:
+            self.emulator_manager = emulator_manager
+        else:
+            # Импортируем здесь, чтобы избежать циклических импортов
+            from ..config.settings import user_settings
+            ldplayer_path = user_settings.get("ldplayer_path", "")
+            self.emulator_manager = EmulatorManager(ldplayer_path)
 
         # Словарь контроллеров ADB для эмуляторов
         # {emulator_id: adb_controller}

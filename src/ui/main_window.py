@@ -213,10 +213,11 @@ class MainWindow(QMainWindow):
         # Путь к ассетам
         self.assets_path = Path(os.path.dirname(os.path.abspath(__file__))) / ".." / ".." / "assets" / "images"
 
-        # Инициализация параллельного выполнения (вместо self.bot_workers = {})
+        # Инициализация параллельного выполнения
         self.parallel_executor = ParallelEmulatorExecutor(
             assets_path=str(self.assets_path),
-            max_workers=None  # Автоматическое определение по количеству эмуляторов
+            max_workers=None,  # Автоматическое определение по количеству эмуляторов
+            emulator_manager=self.emulator_manager  # Передаем существующий EmulatorManager
         )
 
         # Обработчик логов для UI
@@ -1091,7 +1092,8 @@ class MainWindow(QMainWindow):
             # Заново инициализируем executor
             self.parallel_executor = ParallelEmulatorExecutor(
                 assets_path=str(self.assets_path),
-                max_workers=None
+                max_workers=None,
+                emulator_manager=self.emulator_manager  # Передаем существующий EmulatorManager
             )
 
             # Запускаем параллельное выполнение

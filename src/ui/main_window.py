@@ -843,22 +843,37 @@ class MainWindow(QMainWindow):
             self.emulators_progress_container.addWidget(emulator_container)
 
         # Получаем виджеты для этого эмулятора
-        widgets = self.emulator_progress_bars[emulator_index]
+        widget_data = self.emulator_progress_bars[emulator_index]
 
-        # Обновляем метку с текущим шагом
-        widgets["step_label"].setText(f"Текущий шаг: {step_id}")
+        # Проверяем тип widget_data и действуем соответственно
+        if isinstance(widget_data, dict) and "step_label" in widget_data and "progress_bar" in widget_data:
+            # Это словарь, используем как есть
+            step_label = widget_data["step_label"]
+            progress_bar = widget_data["progress_bar"]
+        elif isinstance(widget_data, QProgressBar):
+            # Это QProgressBar, у нас нет метки step_label
+            progress_bar = widget_data
+            step_label = None
+        else:
+            # Неожиданный тип, логируем ошибку
+            logger.error(f"Неожиданный тип для emulator_progress_bars[{emulator_index}]: {type(widget_data)}")
+            return
+
+        # Обновляем метку с текущим шагом, если она существует
+        if step_label is not None:
+            step_label.setText(f"Текущий шаг: {step_id}")
 
         # Обновляем индикатор прогресса
-        if step_id.startswith("step"):
+        if step_id.startswith("step") and progress_bar is not None:
             try:
                 step_num = int(step_id[4:])
-                widgets["progress_bar"].setValue(step_num)
+                progress_bar.setValue(step_num)
 
                 # Устанавливаем цвет в зависимости от успешности выполнения
                 if success:
-                    widgets["progress_bar"].setStyleSheet("QProgressBar::chunk { background-color: #4CAF50; }")
+                    progress_bar.setStyleSheet("QProgressBar::chunk { background-color: #4CAF50; }")
                 else:
-                    widgets["progress_bar"].setStyleSheet("QProgressBar::chunk { background-color: #F44336; }")
+                    progress_bar.setStyleSheet("QProgressBar::chunk { background-color: #F44336; }")
             except ValueError:
                 pass
 

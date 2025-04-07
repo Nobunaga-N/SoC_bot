@@ -219,6 +219,19 @@ class ADBController:
                 return self._last_screenshot.copy()
             return np.zeros((1080, 1920, 3), dtype=np.uint8)
 
+    def get_screenshot(self, use_buffer: bool = True) -> np.ndarray:
+        """
+        Получить скриншот с эмулятора.
+        Алиас для метода get_screenshot_buffered для совместимости.
+
+        Args:
+            use_buffer: Использовать ли буферизацию (повторно использовать последний скриншот)
+
+        Returns:
+            Изображение в формате numpy array (BGR)
+        """
+        return self.get_screenshot_buffered(use_buffer)
+
     def press_key(self, key_code: int) -> None:
         """
         Нажать клавишу по коду.

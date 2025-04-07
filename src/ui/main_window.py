@@ -2,12 +2,13 @@ import os
 import sys
 from pathlib import Path
 from datetime import datetime
+from typing import Dict, List, Optional, Any, Union
 from PyQt6.QtWidgets import (
     QMainWindow, QTabWidget, QVBoxLayout, QHBoxLayout,
     QWidget, QLabel, QPushButton, QSpinBox, QComboBox,
     QListWidget, QListWidgetItem, QCheckBox, QGroupBox,
     QFormLayout, QTextEdit, QSplitter, QMessageBox,
-    QProgressBar, QTableWidget, QTableWidgetItem, QHeaderView, QScrollArea
+    QProgressBar, QTableWidget, QTableWidgetItem, QHeaderView, QScrollArea, QLayout
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QThread
 from PyQt6.QtGui import QColor, QIcon, QTextCursor
@@ -33,7 +34,7 @@ class BotWorker(QThread):
     tutorial_completed = pyqtSignal(bool)
     error_occurred = pyqtSignal(str)
 
-    def __init__(self, emulator_id, assets_path, server_range):
+    def __init__(self, emulator_id: str, assets_path: str, server_range: tuple):
         super().__init__()
         self.emulator_id = emulator_id
         self.assets_path = assets_path
@@ -136,9 +137,67 @@ class MainWindow(QMainWindow):
     """
     Главное окно приложения.
     """
+    # Определение атрибутов класса для устранения предупреждений PyCharm
+    emulator_manager: EmulatorManager
+    stats: StatsTracker
+    assets_path: Path
+    parallel_executor: ParallelEmulatorExecutor
+    ui_logger_handler: Any
+
+    # Вкладки
+    tabs: QTabWidget
+    settings_tab: QWidget
+    stats_tab: QWidget
+    logs_tab: QWidget
+    emulators_tab: QWidget
+
+    # Виджеты настроек
+    ldplayer_path_combo: QComboBox
+    emulators_list: QListWidget
+    refresh_emulators_btn: QPushButton
+    start_emulators_btn: QPushButton
+    stop_emulators_btn: QPushButton
+    start_server_spin: QSpinBox
+    end_server_spin: QSpinBox
+    season_combo: QComboBox
+    start_bot_btn: QPushButton
+    stop_bot_btn: QPushButton
+    status_label: QLabel
+    progress_bar: QProgressBar
+
+    # Виджеты статистики
+    total_runs_label: QLabel
+    success_runs_label: QLabel
+    failed_runs_label: QLabel
+    success_rate_label: QLabel
+    avg_duration_label: QLabel
+    completed_servers_label: QLabel
+    history_table: QTableWidget
+    clear_stats_btn: QPushButton
+
+    # Виджеты логов
+    log_text: QTextEdit
+    clear_logs_btn: QPushButton
+
+    # Виджеты эмуляторов
+    emulators_progress_container: QLayout
+    emulator_progress_bars: Dict[int, Union[QProgressBar, Dict[str, Any]]]
+    emulator_status_labels: Dict[int, QLabel]
+    emulators_container: QWidget
+    emulators_layout: QVBoxLayout
+    refresh_emulators_status_btn: QPushButton
+    restart_unresponsive_btn: QPushButton
+    emulators_status_table: QTableWidget
+
+    # Вспомогательные атрибуты
+    status_timer: QTimer
+    bot_workers: Dict[str, BotWorker]
 
     def __init__(self):
         super().__init__()
+
+        # Инициализация атрибутов с пустыми значениями для типизации
+        self.bot_workers = {}
 
         # Инициализация менеджера эмуляторов
         self.emulator_manager = EmulatorManager()
@@ -717,7 +776,7 @@ class MainWindow(QMainWindow):
 
             # Сервер (если есть активная задача)
             server_item = QTableWidgetItem("-")
-            if hasattr(self, 'bot_workers') and emu["index"] in self.bot_workers:
+            if hasattr(self, 'bot_workers') and isinstance(self.bot_workers, dict) and emu["index"] in self.bot_workers:
                 server_range = self.bot_workers[emu["index"]].server_range
                 server_item.setText(f"{server_range[0]}-{server_range[1]}")
             self.emulators_status_table.setItem(i, 3, server_item)
@@ -725,7 +784,13 @@ class MainWindow(QMainWindow):
             # Прогресс (если есть)
             progress_item = QTableWidgetItem("-")
             if emu["index"] in self.emulator_progress_bars:
-                progress = self.emulator_progress_bars[emu["index"]]["progress_bar"].value()
+                progress_bar_data = self.emulator_progress_bars[emu["index"]]
+                if isinstance(progress_bar_data, dict) and "progress_bar" in progress_bar_data:
+                    progress = progress_bar_data["progress_bar"].value()
+                elif isinstance(progress_bar_data, QProgressBar):
+                    progress = progress_bar_data.value()
+                else:
+                    progress = 0
                 progress_item.setText(f"{progress}/126 ({int(progress / 1.26)}%)")
             self.emulators_status_table.setItem(i, 4, progress_item)
 
@@ -1086,16 +1151,23 @@ class MainWindow(QMainWindow):
         if emulator_index is not None:
             # Обновляем индикатор прогресса
             if hasattr(self, 'emulator_progress_bars') and emulator_index in self.emulator_progress_bars:
-                if isinstance(self.emulator_progress_bars[emulator_index], dict):
-                    progress_bar = self.emulator_progress_bars[emulator_index]["progress_bar"]
-                else:
-                    progress_bar = self.emulator_progress_bars[emulator_index]
+                progress_bar_data = self.emulator_progress_bars[emulator_index]
 
-                if success:
-                    progress_bar.setValue(126)  # Максимальное значение
-                    progress_bar.setStyleSheet("QProgressBar::chunk { background-color: #4CAF50; }")
+                # Проверяем тип progress_bar_data
+                if isinstance(progress_bar_data, dict) and "progress_bar" in progress_bar_data:
+                    progress_bar = progress_bar_data["progress_bar"]
+                elif isinstance(progress_bar_data, QProgressBar):
+                    progress_bar = progress_bar_data
                 else:
-                    progress_bar.setStyleSheet("QProgressBar::chunk { background-color: #F44336; }")
+                    logger.warning(f"Неизвестный тип данных для progress_bar_data: {type(progress_bar_data)}")
+                    progress_bar = None
+
+                if progress_bar:
+                    if success:
+                        progress_bar.setValue(126)  # Максимальное значение
+                        progress_bar.setStyleSheet("QProgressBar::chunk { background-color: #4CAF50; }")
+                    else:
+                        progress_bar.setStyleSheet("QProgressBar::chunk { background-color: #F44336; }")
 
             # Обновляем статус
             if hasattr(self, 'emulator_status_labels') and emulator_index in self.emulator_status_labels:
@@ -1231,7 +1303,7 @@ class MainWindow(QMainWindow):
             event: Событие закрытия
         """
         # Останавливаем всех ботов
-        if hasattr(self, 'bot_workers'):
+        if hasattr(self, 'bot_workers') and isinstance(self.bot_workers, dict):
             for worker in self.bot_workers.values():
                 worker.stop()
 
@@ -1240,7 +1312,7 @@ class MainWindow(QMainWindow):
             self.parallel_executor.stop()
 
         # Удаляем обработчик логов
-        if self.ui_logger_handler:
+        if hasattr(self, 'ui_logger_handler') and self.ui_logger_handler:
             remove_ui_logger(self.ui_logger_handler)
 
         event.accept()

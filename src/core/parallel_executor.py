@@ -324,7 +324,7 @@ class ParallelEmulatorExecutor:
 
     def _run_tutorial(self, emulator_id: str) -> bool:
         """
-        Внутренний метод для выполнения туториала.
+        Внутренний метод для выполнения туториала с улучшенной обработкой ошибок.
 
         Args:
             emulator_id: Идентификатор эмулятора
@@ -333,21 +333,43 @@ class ParallelEmulatorExecutor:
             True если туториал выполнен успешно, иначе False
         """
         try:
-            with self.lock:
-                if emulator_id not in self.adb_controllers:
-                    logger.error(f"Контроллер ADB для эмулятора {emulator_id} не инициализирован")
-                    return False
+            # Проверяем наличие необходимых компонентов без удержания блокировки
+            if emulator_id not in self.adb_controllers:
+                logger.error(f"Контроллер ADB для эмулятора {emulator_id} не инициализирован")
+                return False
 
-                adb_controller = self.adb_controllers[emulator_id]
+            adb_controller = self.adb_controllers[emulator_id]
 
-                if emulator_id not in self.tutorial_engines:
-                    logger.error(f"Движок туториала для эмулятора {emulator_id} не инициализирован")
-                    return False
+            if emulator_id not in self.tutorial_engines:
+                logger.error(f"Движок туториала для эмулятора {emulator_id} не инициализирован")
+                return False
 
-                tutorial_engine = self.tutorial_engines[emulator_id]
+            tutorial_engine = self.tutorial_engines[emulator_id]
 
-            # Проверяем доступность устройства здесь, в рабочем потоке
-            if not adb_controller.wait_for_device(timeout=10):
+            # Проверка доступности устройства с таймаутом
+            device_check = threading.Event()
+            device_available = [False]  # Используем список для изменения значения в потоке
+
+            def check_device():
+                try:
+                    if adb_controller.wait_for_device(timeout=5):
+                        device_available[0] = True
+                    device_check.set()
+                except Exception as e:
+                    logger.error(f"Ошибка при проверке устройства {emulator_id}: {e}")
+                    device_check.set()
+
+            # Запускаем проверку в отдельном потоке с таймаутом
+            check_thread = threading.Thread(target=check_device)
+            check_thread.daemon = True
+            check_thread.start()
+
+            # Ждем завершения проверки с таймаутом
+            if not device_check.wait(timeout=7):  # 7 секунд - больше, чем таймаут метода wait_for_device
+                logger.error(f"Таймаут проверки доступности устройства {emulator_id}")
+                return False
+
+            if not device_available[0]:
                 logger.error(f"Устройство {emulator_id} недоступно перед запуском туториала")
                 return False
 
@@ -369,7 +391,7 @@ class ParallelEmulatorExecutor:
             return success
 
         except Exception as e:
-            logger.error(f"Ошибка при выполнении туториала на эмуляторе {emulator_id}: {e}")
+            logger.error(f"Ошибка при выполнении туториала на эмуляторе {emulator_id}: {e}", exc_info=True)
             return False
 
     def run_task(self, task: EmulatorTask) -> Any:

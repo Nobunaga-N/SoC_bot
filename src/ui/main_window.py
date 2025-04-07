@@ -1267,6 +1267,7 @@ class MainWindow(QMainWindow):
     def start_bot(self):
         """
         Запуск бота на выбранных эмуляторах.
+        Улучшенная версия с корректным управлением потоками.
         """
         try:
             selected_items = self.emulators_list.selectedItems()
@@ -1292,20 +1293,37 @@ class MainWindow(QMainWindow):
             for idx in emulator_indices:
                 server_ranges[idx] = (start_server, end_server)
 
-            # Перезапускаем parallel_executor если он уже был запущен
+            # Перезапускаем parallel_executor с корректной остановкой
             if hasattr(self, 'parallel_executor') and self.parallel_executor is not None:
+                logger.info("Останавливаем предыдущую сессию...")
                 self.parallel_executor.stop()
-                time.sleep(1)  # Даем время на остановку
+
+                # Ждем остановки, но с таймаутом
+                wait_start = time.time()
+                max_wait = 5  # Максимальное время ожидания в секундах
+
+                while hasattr(self.parallel_executor, 'executor') and self.parallel_executor.executor is not None:
+                    if time.time() - wait_start > max_wait:
+                        logger.warning("Превышен таймаут ожидания остановки parallel_executor")
+                        break
+                    time.sleep(0.1)
 
             # Заново инициализируем executor
+            logger.info("Инициализация параллельного выполнителя...")
             self.parallel_executor = ParallelEmulatorExecutor(
                 assets_path=str(self.assets_path),
                 max_workers=None,
                 emulator_manager=self.emulator_manager
             )
 
-            # Запускаем параллельное выполнение
-            self.parallel_executor.start()
+            # Запускаем параллельное выполнение с обработкой ошибок
+            try:
+                self.parallel_executor.start()
+            except Exception as e:
+                logger.error(f"Ошибка при запуске параллельного выполнителя: {e}", exc_info=True)
+                QMessageBox.critical(self, "Ошибка", f"Ошибка инициализации параллельного выполнителя: {str(e)}")
+                self.start_bot_btn.setEnabled(True)
+                return
 
             # Показываем индикатор прогресса и блокируем кнопки
             self.start_bot_btn.setEnabled(False)

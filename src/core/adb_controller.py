@@ -86,6 +86,49 @@ class ADBController:
         finally:
             timer.cancel()
 
+    def get_screenshot_direct(self) -> np.ndarray:
+        """
+        Получение скриншота напрямую через exec-out без сохранения файла.
+        Это быстрее, чем стандартный метод с сохранением на устройстве.
+
+        Returns:
+            Изображение в формате numpy array (BGR)
+        """
+        try:
+            # Выполняем команду screencap с таймаутом и получаем данные напрямую
+            command = "exec-out screencap -p"
+            process = subprocess.Popen(
+                f"adb -s {self.emulator_id} {command}",
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                shell=True
+            )
+
+            # Устанавливаем таймаут
+            try:
+                stdout, stderr = process.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                logger.error("Таймаут при получении скриншота")
+                return np.zeros((1080, 1920, 3), dtype=np.uint8)
+
+            if process.returncode != 0:
+                logger.error(f"Ошибка при получении скриншота: {stderr.decode('utf-8', errors='ignore')}")
+                return np.zeros((1080, 1920, 3), dtype=np.uint8)
+
+            # Преобразуем бинарные данные в массив numpy
+            nparr = np.frombuffer(stdout, np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+            if img is None:
+                logger.error("Не удалось декодировать скриншот")
+                return np.zeros((1080, 1920, 3), dtype=np.uint8)
+
+            return img
+        except Exception as e:
+            logger.error(f"Ошибка при получении скриншота: {e}")
+            return np.zeros((1080, 1920, 3), dtype=np.uint8)
+
     def check_adb_server(self) -> bool:
         """
         Проверка состояния ADB сервера и его перезапуск при необходимости.
@@ -222,7 +265,7 @@ class ADBController:
     def get_screenshot(self, use_buffer: bool = True) -> np.ndarray:
         """
         Получить скриншот с эмулятора.
-        Алиас для метода get_screenshot_buffered для совместимости.
+        Улучшенная версия с использованием прямого метода.
 
         Args:
             use_buffer: Использовать ли буферизацию (повторно использовать последний скриншот)
@@ -230,7 +273,32 @@ class ADBController:
         Returns:
             Изображение в формате numpy array (BGR)
         """
-        return self.get_screenshot_buffered(use_buffer)
+        if not hasattr(self, '_last_screenshot') or not hasattr(self, '_last_screenshot_time'):
+            self._last_screenshot = None
+            self._last_screenshot_time = 0
+
+        # Если буферизация включена и прошло менее 100 мс с момента последнего скриншота,
+        # возвращаем сохраненный скриншот
+        current_time = time.time()
+        if use_buffer and self._last_screenshot is not None and (current_time - self._last_screenshot_time) < 0.1:
+            return self._last_screenshot.copy()
+
+        logger.debug("Получение нового скриншота с эмулятора")
+
+        # Используем более быстрый метод получения скриншота
+        img = self.get_screenshot_direct()
+
+        if img is None or img.size == 0:
+            logger.error("Не удалось получить скриншот")
+            if self._last_screenshot is not None:
+                return self._last_screenshot.copy()
+            return np.zeros((1080, 1920, 3), dtype=np.uint8)
+
+        # Сохраняем скриншот и время получения
+        self._last_screenshot = img
+        self._last_screenshot_time = current_time
+
+        return img
 
     def press_key(self, key_code: int) -> None:
         """

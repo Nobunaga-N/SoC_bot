@@ -2,7 +2,8 @@ import os
 import re
 import subprocess
 import time
-from typing import List, Dict, Optional
+import threading
+from typing import List, Dict, Optional, Tuple
 from threading import Lock
 from ..utils.logger import get_logger
 
@@ -98,6 +99,40 @@ class EmulatorManager:
         logger.error("Не удалось автоматически найти LDPlayer")
         return False
 
+    def execute_ldconsole_with_timeout(self, command: str, timeout: float = 5.0) -> str:
+        """
+        Выполнение команды ldconsole с таймаутом.
+
+        Args:
+            command: Команда для выполнения
+            timeout: Таймаут в секундах
+
+        Returns:
+            Результат выполнения команды
+        """
+        if not self.ldconsole_path or not os.path.exists(self.ldconsole_path):
+            logger.error(f"Путь к ldconsole.exe не установлен или неверный: {self.ldconsole_path}")
+            return ""
+
+        try:
+            full_command = f'"{self.ldconsole_path}" {command}'
+            logger.debug(f"Выполнение команды LDConsole с таймаутом {timeout}с: {full_command}")
+
+            import subprocess
+            result = subprocess.run(full_command, shell=True, capture_output=True, text=True, timeout=timeout)
+
+            if result.returncode != 0:
+                logger.error(f"Ошибка выполнения команды LDConsole: {result.stderr}")
+                return result.stderr
+
+            return result.stdout.strip()
+        except subprocess.TimeoutExpired:
+            logger.error(f"Таймаут выполнения команды LDConsole: {command}")
+            return "ERROR: Timeout"
+        except Exception as e:
+            logger.error(f"Непредвиденная ошибка при выполнении команды LDConsole: {e}")
+            return ""
+
     def execute_ldconsole(self, command: str) -> str:
         """
         Выполнение команды ldconsole.
@@ -190,59 +225,68 @@ class EmulatorManager:
     def get_emulator_adb_id(self, emulator_index: int) -> Optional[str]:
         """
         Получение ADB ID для эмулятора LDPlayer по его индексу.
+        Улучшенная версия, которая не блокирует основной поток.
         """
-        with self._lock:
-            try:
-                # Если уже знаем ID, вернем его
-                for adb_id, idx in self.active_emulators.items():
-                    if idx == str(emulator_index):
-                        logger.info(f"Используем сохраненный ADB ID для эмулятора {emulator_index}: {adb_id}")
-                        return adb_id
+        try:
+            # Если уже знаем ID, вернем его сразу
+            for adb_id, idx in self.active_emulators.items():
+                if idx == str(emulator_index):
+                    logger.info(f"Используем сохраненный ADB ID для эмулятора {emulator_index}: {adb_id}")
+                    return adb_id
 
-                # Проверяем, запущен ли эмулятор
-                if not self.is_emulator_running(emulator_index):
-                    # Пробуем запустить эмулятор, если он не запущен
-                    logger.info(f"Эмулятор {emulator_index} не запущен, пробуем запустить")
-                    self.start_emulator(emulator_index)
-                    time.sleep(5)  # Ждем запуска
+            # Проверяем, запущен ли эмулятор БЕЗ блокирования с помощью lock
+            emulators = self.list_emulators()
+            emulator_running = False
 
-                # Получаем ADB ID через LDConsole
-                logger.debug(f"Получение ADB ID для эмулятора {emulator_index}")
-                result = self.execute_ldconsole(f"adb --index {emulator_index} --command \"get-serialno\"")
+            for emu in emulators:
+                if emu["index"] == str(emulator_index) and emu["status"] == "running":
+                    emulator_running = True
+                    break
 
-                if result and result.strip():
-                    device_id = result.strip()
+            if not emulator_running:
+                logger.warning(f"Эмулятор {emulator_index} не запущен, пропускаем получение ADB ID")
+                return None
+
+            # Получаем ADB ID через LDConsole с таймаутом
+            logger.debug(f"Получение ADB ID для эмулятора {emulator_index}")
+            result = self.execute_ldconsole_with_timeout(f"adb --index {emulator_index} --command \"get-serialno\"",
+                                                         timeout=5)
+
+            if result and result.strip():
+                device_id = result.strip()
+                with self._lock:  # Используем lock только для краткой операции записи в словарь
                     self.active_emulators[device_id] = str(emulator_index)
-                    logger.info(f"Получен ADB ID для эмулятора {emulator_index}: {device_id}")
+                logger.info(f"Получен ADB ID для эмулятора {emulator_index}: {device_id}")
+                return device_id
+
+            # Альтернативный способ - получить через список устройств ADB
+            adb_devices = self.get_adb_devices()
+
+            # Для LDPlayer обычно используется порт 5554 + 2*index или 5555 + 2*index
+            expected_port1 = 5554 + emulator_index * 2
+            expected_port2 = 5555 + emulator_index * 2
+
+            for device_id, status in adb_devices.items():
+                if status == "device" and (
+                        f"emulator-{expected_port1}" in device_id or
+                        f"127.0.0.1:{expected_port2}" in device_id
+                ):
+                    with self._lock:  # Краткая операция записи
+                        self.active_emulators[device_id] = str(emulator_index)
+                    logger.info(f"Получен ADB ID для эмулятора {emulator_index} через список устройств: {device_id}")
                     return device_id
 
-                # Альтернативный способ - получить через список устройств ADB
-                adb_devices = self.get_adb_devices()
+            logger.error(f"Не удалось получить ADB ID для эмулятора {emulator_index}")
+            return None
 
-                # Для LDPlayer обычно используется порт 5554 + 2*index или 5555 + 2*index
-                expected_port1 = 5554 + emulator_index * 2
-                expected_port2 = 5555 + emulator_index * 2
-
-                for device_id, status in adb_devices.items():
-                    if status == "device" and (
-                            f"emulator-{expected_port1}" in device_id or
-                            f"127.0.0.1:{expected_port2}" in device_id
-                    ):
-                        self.active_emulators[device_id] = str(emulator_index)
-                        logger.info(
-                            f"Получен ADB ID для эмулятора {emulator_index} через список устройств: {device_id}")
-                        return device_id
-
-                logger.error(f"Не удалось получить ADB ID для эмулятора {emulator_index}")
-                return None
-
-            except Exception as e:
-                logger.error(f"Ошибка при получении ADB ID для эмулятора {emulator_index}: {e}")
-                return None
+        except Exception as e:
+            logger.error(f"Ошибка при получении ADB ID для эмулятора {emulator_index}: {e}")
+            return None
 
     def start_emulator(self, emulator_index: int) -> bool:
         """
         Запуск эмулятора LDPlayer по его индексу.
+        Улучшенная версия, которая не блокирует на долгое время.
 
         Args:
             emulator_index: Индекс эмулятора
@@ -250,34 +294,43 @@ class EmulatorManager:
         Returns:
             True если эмулятор запущен успешно, иначе False
         """
-        with self._lock:
-            logger.info(f"Запуск эмулятора с индексом {emulator_index}")
+        # Проверяем, не запущен ли уже эмулятор
+        emulators = self.list_emulators()
+        for emu in emulators:
+            if emu["index"] == str(emulator_index) and emu["status"] == "running":
+                logger.info(f"Эмулятор {emulator_index} уже запущен")
+                return True
 
-            # Проверяем, не запущен ли уже эмулятор
-            emulators = self.list_emulators()
-            for emu in emulators:
-                if emu["index"] == str(emulator_index) and emu["status"] == "running":
-                    logger.info(f"Эмулятор {emulator_index} уже запущен")
-                    return True
+        # Запускаем эмулятор - короткая операция с lock
+        logger.info(f"Запуск эмулятора с индексом {emulator_index}")
+        result = self.execute_ldconsole_with_timeout(f"launch --index {emulator_index}", timeout=5)
 
-            # Запускаем эмулятор
-            result = self.execute_ldconsole(f"launch --index {emulator_index}")
+        # Проверяем запуск без удержания lock
+        start_time = time.time()
+        max_wait_time = 30  # Максимальное время ожидания в секундах
+        check_interval = 2  # Интервал проверки в секундах
 
-            # Ждем запуска эмулятора
-            max_attempts = 30
-            for attempt in range(max_attempts):
-                time.sleep(2)  # Ждем 2 секунды между проверками
+        while time.time() - start_time < max_wait_time:
+            # Проверяем статус без блокировки
+            is_running = False
+            try:
+                result = self.execute_ldconsole_with_timeout(
+                    f"isrunning --index {emulator_index}",
+                    timeout=3
+                )
+                is_running = "running" in result.lower() or "1" in result
+            except Exception as e:
+                logger.error(f"Ошибка при проверке статуса эмулятора {emulator_index}: {e}")
 
-                emulators = self.list_emulators()
-                for emu in emulators:
-                    if emu["index"] == str(emulator_index) and emu["status"] == "running":
-                        logger.info(f"Эмулятор {emulator_index} успешно запущен")
-                        return True
+            if is_running:
+                logger.info(f"Эмулятор {emulator_index} успешно запущен")
+                return True
 
-                logger.debug(f"Ожидание запуска эмулятора {emulator_index}, попытка {attempt + 1}/{max_attempts}")
+            logger.debug(f"Ожидание запуска эмулятора {emulator_index}, прошло {time.time() - start_time:.1f}с")
+            time.sleep(check_interval)
 
-            logger.error(f"Не удалось запустить эмулятор {emulator_index} после {max_attempts} попыток")
-            return False
+        logger.error(f"Не удалось запустить эмулятор {emulator_index} после {max_wait_time}с ожидания")
+        return False
 
     def stop_emulator(self, emulator_index: int) -> bool:
         """

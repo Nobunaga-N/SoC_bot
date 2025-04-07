@@ -26,12 +26,13 @@ class ADBController:
         self.emulator_id = emulator_id
         logger.info(f"Инициализация ADB контроллера для эмулятора {emulator_id}")
 
-    def execute_command(self, command: str) -> str:
+    def execute_command(self, command: str, retry_count: int = 2) -> str:
         """
-        Выполнение ADB команды.
+        Выполнение ADB команды с повторными попытками.
 
         Args:
             command: ADB команда для выполнения
+            retry_count: Количество повторных попыток в случае ошибки
 
         Returns:
             Результат выполнения команды
@@ -39,12 +40,35 @@ class ADBController:
         full_command = f"adb -s {self.emulator_id} {command}"
         logger.debug(f"Выполнение ADB команды: {full_command}")
 
-        try:
-            result = subprocess.check_output(full_command, shell=True, stderr=subprocess.STDOUT)
-            return result.decode('utf-8').strip()
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Ошибка выполнения ADB команды: {e}")
-            return e.output.decode('utf-8').strip()
+        for attempt in range(retry_count + 1):
+            try:
+                result = subprocess.check_output(full_command, shell=True, stderr=subprocess.STDOUT, timeout=10)
+                return result.decode('utf-8', errors='ignore').strip()
+            except subprocess.CalledProcessError as e:
+                error_msg = e.output.decode('utf-8', errors='ignore').strip()
+                logger.error(f"Ошибка выполнения ADB команды (попытка {attempt + 1}/{retry_count + 1}): {error_msg}")
+
+                # Проверяем, есть ли проблемы с ADB сервером
+                if "daemon not running" in error_msg or "cannot connect to daemon" in error_msg:
+                    logger.warning("Проблема с ADB сервером, пробуем перезапустить...")
+                    self.check_adb_server()
+
+                if attempt < retry_count:
+                    time.sleep(1.0)  # Пауза перед повторной попыткой
+                else:
+                    return error_msg
+            except subprocess.TimeoutExpired:
+                logger.error(f"Таймаут выполнения команды (попытка {attempt + 1}/{retry_count + 1}): {full_command}")
+                if attempt < retry_count:
+                    time.sleep(1.0)  # Пауза перед повторной попыткой
+                else:
+                    return "ERROR: Timeout"
+            except Exception as e:
+                logger.error(f"Непредвиденная ошибка (попытка {attempt + 1}/{retry_count + 1}): {e}")
+                if attempt < retry_count:
+                    time.sleep(1.0)  # Пауза перед повторной попыткой
+                else:
+                    return f"ERROR: {str(e)}"
 
     def execute_command_with_timeout(self, command: str, timeout: float = 30.0) -> str:
         """
@@ -161,16 +185,32 @@ class ADBController:
             logger.error(f"Ошибка при проверке ADB сервера: {e}")
             return False
 
-    def tap(self, x: int, y: int) -> None:
+    def tap(self, x: int, y: int) -> bool:
         """
-        Выполнить клик по координатам.
+        Выполнить клик по координатам с проверкой успешности выполнения.
 
         Args:
             x: Координата x для клика
             y: Координата y для клика
+
+        Returns:
+            True если команда была выполнена успешно, иначе False
         """
         logger.debug(f"Клик по координатам x={x}, y={y}")
-        self.execute_command(f"shell input tap {x} {y}")
+        try:
+            result = self.execute_command(f"shell input tap {x} {y}")
+
+            # Проверяем, нет ли ошибок в ответе
+            if "ERROR" in result or "error" in result.lower():
+                logger.error(f"Ошибка при выполнении клика: {result}")
+                return False
+
+            # Добавляем небольшую задержку после клика
+            time.sleep(0.3)
+            return True
+        except Exception as e:
+            logger.error(f"Исключение при выполнении клика: {e}")
+            return False
 
     def swipe(self, start_x: int, start_y: int, end_x: int, end_y: int, duration_ms: int = 300) -> None:
         """

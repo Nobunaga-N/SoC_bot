@@ -119,7 +119,7 @@ class TutorialEngine:
 
     def _run_tutorial(self):
         """
-        Основной метод выполнения туториала.
+        Основной метод выполнения туториала с добавленными паузами между шагами.
         """
         logger.info("Начало выполнения туториала")
         success = False
@@ -141,6 +141,9 @@ class TutorialEngine:
                 self.current_step = step
                 logger.info(f"Выполнение шага {step.id}: {step.description}")
 
+                # Добавляем небольшую паузу перед выполнением шага
+                time.sleep(random.uniform(0.3, 0.7))
+
                 # Выполняем шаг с заданным количеством попыток
                 step_success = False
                 for attempt in range(step.retry_count):
@@ -156,12 +159,15 @@ class TutorialEngine:
                         if i % 5 == 0:  # Каждый 5-й шаг считаем критичным
                             self.save_checkpoint()
 
+                        # Обязательная пауза после успешного выполнения шага
+                        time.sleep(random.uniform(0.5, 1.0))
                         break
                     except Exception as e:
                         logger.error(
                             f"Ошибка при выполнении шага {step.id} (попытка {attempt + 1}/{step.retry_count}): {e}")
                         if attempt < step.retry_count - 1:
-                            time.sleep(1.0)  # Пауза перед следующей попыткой
+                            # Увеличиваем паузу между попытками
+                            time.sleep(random.uniform(1.0, 2.0))
 
                 # Вызываем колбэк завершения шага
                 if self.on_step_complete:
@@ -170,6 +176,11 @@ class TutorialEngine:
                 if not step_success:
                     logger.error(f"Шаг {step.id} не выполнен после {step.retry_count} попыток")
                     break
+
+                # Дополнительная пауза после шага
+                delay = random.uniform(0.5, 1.0)
+                logger.debug(f"Пауза {delay:.2f}с перед следующим шагом")
+                time.sleep(delay)
 
             # Если дошли до конца и не было прерывания, считаем туториал успешным
             success = not self.stop_event.is_set() and self.current_step.id == self.steps[-1].id
@@ -193,7 +204,7 @@ class TutorialEngine:
 
     def click_on_image(self, image_name: str, timeout: float = 10.0, threshold: float = 0.8) -> bool:
         """
-        Клик по изображению на экране.
+        Клик по изображению на экране с дополнительной задержкой после клика.
 
         Args:
             image_name: Имя изображения для поиска
@@ -209,8 +220,20 @@ class TutorialEngine:
 
         if coords:
             x, y = coords
-            self.adb.tap(x, y)
+            logger.info(f"Выполняем клик по найденному изображению {image_name} по координатам ({x}, {y})")
+            # Добавляем небольшую случайность для координат (±5 пикселей)
+            x_rand = x + random.randint(-5, 5)
+            y_rand = y + random.randint(-5, 5)
+            self.adb.tap(x_rand, y_rand)
+
+            # Добавляем обязательную паузу после клика (0.5-1.5 секунды)
+            time.sleep(random.uniform(0.5, 1.5))
+
+            # Проверяем, что клик был успешным (опционально)
+            logger.info(f"Клик по {image_name} выполнен")
             return True
+
+        logger.warning(f"Изображение {image_name} не найдено за отведенное время ({timeout}с)")
         return False
 
     def click_on_coordinates(self, x: int, y: int, wait_time: float = 0) -> bool:

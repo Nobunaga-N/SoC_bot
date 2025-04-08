@@ -38,7 +38,7 @@ class ImageProcessor:
             "start_battle": 0.82,
 
             # Иконки
-            "open_profile": 0.85,
+            "open_profile": 0.70,
             "navigator": 0.85,
             "lite_apks": 0.82,
             "hero_face": 0.80,

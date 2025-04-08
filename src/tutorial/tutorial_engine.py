@@ -153,7 +153,7 @@ class TutorialEngine:
                     try:
                         # Выполняем действие шага
                         result = step.action(*step.args, **step.kwargs)
-                        step_success = True
+                        step_success = bool(result)  # Учитывать возвращаемое значение
 
                         # Если шаг является критичным, сохраняем контрольную точку
                         if i % 5 == 0:  # Каждый 5-й шаг считаем критичным
